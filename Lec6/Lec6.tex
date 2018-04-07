@@ -1,0 +1,219 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{March 20}{Alessandro Pellegrini}{6}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+The data structure pglist\_data holds the informations about all the available memory of a Numa Node. 
+
+For each node there are different nodes. Within a physical numa node we have node\_zones that describes. Then there is the map and the size of the node.
+
+First zone is DMA, on x86 32 bit it is associated with the first physical 16MB. This is for Direct Memory Access. This is done because some DMAC are not capable of accessing other regions of memory. Linux reserves this for example also for disk access. Zone Normal is all the memory that the kernel has always mapped to its own virtual memory. Zone HIGHMEM is sometimes mapped by the kernel on some cases. It is usually used to remap. In x64 the notion of high memory is removed since the availability of addresses makes it easy to access portions of physical memory that are not mapped.
+
+Zones are initialised after the kernel page table is setup by paging \_ init. We need a way to describe the physical available memory. The kernel has still some init areas that need to be wiped etc. The kernel must know which free pages are available. The zones are a description of available physical memory. 
+
+In the node version of the api is used for initialising the data structure of a node. Each node has the data structure stored in its own.
+
+During the POST phase the BIOS can know how much physical memory is available and setups a table called e820 table, stored in memory that has info related on how much physical memory is available and which are the regions available or not (for example in BIOS shadow initialisation telling "there is the bios here"). PFN is the number of physical available memory in ram. The 3rd entry is used by the kernel and the very beginning by the IVT.
+
+The description of a node has a zone\_t data structure that has free area entry inside, that is used by allocators. It has also a spinlock that might be a bottlenech.
+
+For each node there is a pg data t which has zones (usually 3). Each zone has a memory map that tells which are the available pages in that zone. 
+
+Core Map is used to describe the memory in ZONE NORMAL, tells how much available physical memory in ZONE NORMAL there is. You have to look this Data Structure to know how to allocate memory. We're talking about kernel dynamic memory allocation. There is no heap in the kernel.
+
+It has a list that has the list of pages, usage count and some flags. The list is a free list. All the available physical frames are kept in a free list making the allocation quick not having to check some bitmap. The counter counts the virtual references mapped to a frame. One single frame could be mapped by multiple virtual addresses for example in memory sharing. The flags describe how that specific page can be used.  (list head keeps the pointer to next and previous).
+
+Free area initialisation is done in free area init. The frame has no virtual reference and the frame is reserved. Since both bootmem and the steady state allocators are both working we must be careful to not have conflicting actions between the two. By PG reserved we ensure that the stedy state allocator will not do anything until bootmem is "removed". Mem init will then reset that flag.
+
+\section{Buddy System}
+
+Fast algorithm. Suffers of fragmentation. Recursively split and find the best fit for the requested memory. 
+
+There is an array of free\_area\_t where the pointer to the free pages is kept into list head. The integer is used as a smart bitmap. 1 bit for a pair of buddies. Any time that you allocate or free one of the two buddies you invert the buddies. 1 means only one of the two buddies is in use while 0 that either both are available or none. 
+
+The mem alloc starts from higher order to lower to find which buddy is best. 
+
+
+\section{High Memory}
+
+vmap: long duration mapping for multiple physical pages.
+
+kmap: short duration, needs global sync, all the cores running in kernel mode will see that mapping
+
+kmap atomic: short duration but only this cpu will see that mapping, used in interrupt handlers usually. 
+
+Deallocation: vector of counters for each high memory page. 0 is not mapped, not used by anyone else. 1 just been released. more than 1 it is mapped multiple times. The release is done with kunmap that decrements the counter. When the counter goes to 1 means that no kernel thread is referencing that page.
+
+On mapping we create a PTE.
+
+All the CR3 registers point to the same page table since it is not useful to have different views on memory. When counter 1 the PTE is removed and the tlb is flushed to be sure that all the cores remove that from tlb. 
+
+The struct pages hold the physical addresses of the pages that are then translated to virtual ones.
+
+Memory allocation is finalised with mem init. Destroys the bootmem allocator and releases all the frames used by bootmem through the PG reserved bit. free page is invoked for each page that is freed to give them to buddy. The page count is set to one and free page is called to fake the buddy into thinking that this was actual freed by some kernel subsystem.
+
+The memory allocator is general and doesn't know who is asking for the memory. Process context or Interrupt.
+
+API offered by the buddy system for kernel internal allocation (kernel modules etc.). Get zeroed page, zeros the content and return the virtual address.
+
+Get free pages increases the likelihood of fragmentation.
+
+free page puts back a page into the free list. Failing to pass addr or order might spoil the kernel.
+
+
+Allocations accept flags. GFP atomic won't put to sleep the asker, used for interrupt context. USER can put to sleep used for userspace. KERNEL is for kernel while BUFFER for buffers to pass data structures to userspace for example. Sleeping the kernel means the thread asking.
+
+In case of NUMA we must also tell which numa node we want to allocate memory etc. or in case of Get free pages returns any numa node etc. Various NUMA policies are specified on how the node is chosen and can be set through set mempolicy. nodemask tell which nodes are involved and maxnode how many bits of the maks need to be checked. The modes can be default which asks for memory from the same node in which the request is issued. bind is from where I was spawned. Interleave different node on each allocation. Preferred you choose.
+
+mbind sets a numa policy for a range of addresses.
+
+move pages is used to move from one numa node to the other. A set of pages moved to a set of nodes and the status tells whether the call succeeded. The cache controllers of the various cores read and communicate for moving pages. 1 line is 64 Bytes therefore there is great overhead to move pages.
+
+Issues are fragmentations (internal and external). Latency. For each numa node there is a buddy system. Anytime asking pages and releasing a spinlock is used.
+
+Fast allocators allow quick allocation through caching. SLAB a block is used. SLUB is the default and is an optimisation of SLAB.
+
+\newpage
+\bibliography{Lec6}
+\bibliographystyle{plainnat}
+\end{document}

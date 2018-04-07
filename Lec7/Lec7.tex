@@ -1,0 +1,221 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{March 23}{Alessandro Pellegrini}{7}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+\iffalse
+The bootmem allocator is used for allocating memory in the 8MB addressable by the kernel right after decompression.
+\fi
+
+Spawning many processes with a short lifetime it is not performed efficiently through the buddy system.
+
+Quicklist avoid contention of allocating pages by pre assigning pages to cores. The SLAB allocator is used for buffers.
+
+In quicklists no syncronization is needed. If no entries available in the list it asks memory to the buddy system through \_\_get\_free\_page
+
+\section{Quicklist Allocation}
+
+Kernel threads can move around in cores: get cpu var is a wrapper to a set of calls that disables preemption for that specific core until re enabled by put cpu var.
+
+\section{SLAB Allocator}
+
+There is a list of caches where each cache keeps a slab of a specific size. A cache is organised in three types of slabs: full (Don't have buffers to be given), partial (some used and some free), free (deallocated or never allocated). Objects are abstractions over pages.
+
+\subsection{SLAB Interfaces}
+
+Found in linux / malloc h. kmalloc asks for a given size and returns the virtual address of a buffer of that size. kfree frees memory allocated via kmalloc. k malloc node is an api to the slab allocator that in the end will ask to the buddy system of a specific numa node for allocating some page.  
+
+kmalloc should be used for frequent allocations and deallocations of the same size. 
+
+up to kernel v 3.9.11 there was the struct cache size. cs\_cachep is a pointer to the memory. There is a table of multiple size fixed-size caches. 
+
+In kernel 3.10 we move from fixed size to list with spinlock again. You can either have a shared across cores allocator or one allocator for each core. Having one allocator for each core requires space. What's the difference btw using the buddy system and slab? buddy has one spinlock for each numa node while slab has one spinlock for each size of cache. \marginnote{SLAB and Buddy both are for the kernel}[-36 pt]
+
+Per node cache coloring: size of object then padding and so on. Why is coloring used? to align objects to L1 Cache Bytes. Two objects of the same size will not fall in the same cache line. An object of size greater than one line is padded to the size of multiple cache lines.
+
+This ensures that two slabs objects allocated will not fall in the same cache line to not fall into cache contention.
+
+Members that are accessed together and used frequently together (Common Members) are placed close together to optimise cache hits for example the spinlock and slab partial in kmem cache node struct. 
+
+(Loosely related fields): due to the false cache sharing problem we have that cache controllers in order to be coherent tell the others cache controllers that they are going to write that line wanting "mutual exclusion". With coloring we ensure that different buffers will not fall in the same cache line. 
+
+\subsection{Cache flush operations}
+
+Similarily to the TLB relies on the hardware specific operations for granularity and coherency of the flushing. There are also problems because the hardware cache uses virtual addresses, therefore two processes addressing the same virtual address might have a cache hit to a region of memory that is not the physical one they wanted to access. After flushing the page cache we must also flush the TLB.
+
+\begin{description}
+    \item \texttt{flush_cache_all:} Flushes the entire CPU cache system. It is used for when global data structures, for example kernel page tables, are changed to ensure cache coherency.
+    \item others...
+\end{description}
+
+What is the best way to devise a cache? physical or virtual? Intel architectures use Virtual addresses to tag L1 cache. If there is a miss in L1 the TLB is consulted to get the physical and check the L2 which is addressed through the physical address. There is a protocol btw L1 and TLB to know whether a virtual address is consistent with the current paging scheme. Therefore in intel we do not care about cache consistency.
+
+Virtual aliasing is the problem described above where we tag the L1 cache through virtual addresses but if the cache is not coherent ...
+
+The other apis are a low level api that are used by the description above.
+
+copy from and to user ensures that the copy of memory is done correctly since there might be a process switch and the write might be writing memory of another process.
+
+Access ok checks whether the memory area passed is correctly mapped to that process. 
+
+\texttt{vmalloc} used to map some memory in the kernel in a stable way, that will be used for a long time. No idea about the memory contiguousness. No info about the organisation of physical frames. Used for usually loading some kernel module for code, data etc of the module. It doesn't rely in either the Buddy system or slab. 
+
+\texttt{virt_to_phys} and viceversa used in kmalloc or get free page to compute the mapping btw physical and virtual addresses. This is done to be hardware independent when developing a kernel module to not rely on offsets etc. 
+
+For allocation size in kmalloc is limited to 8KB in Linux. vmalloc btw 64/128MB. Kmalloc is physical contiguous while vmalloc no. Vmalloc invalidates transparently the TLB etc while kmalloc no. This is done because for example in loading kernel modules you want that all threads have visibility of the change. 
+
+After setting up all the memory \texttt{trap\_init()} initialises the IDT and GDT.
+The only entry point to kernel land from user space is through the interrupt \texttt{0x80}. The same is done in Windows.
+
+That interrupt executes the system call dispatcher which finds out what the user code wants to do. Every system call has a code assigned to it.
+
+Interrupts automatically reset the Flags while Traps do not. The dispatcher explicitly clears interrupts through \texttt{cli} instruction. In multi-core systems this is not enough, we must ensure correctness of all the data structures of the kernel. Spinlocks (implemented through the \texttt{cmpxchg} instruction) are used to access data structures.
+
+Since syscalls have preassigned numbers if we change only one of them we break backward compatibility.
+
+Macros are used for generating asm volatile blocks defining a syscall. Multiple macros depending by the number of the parameters of the syscall (usually at most 6 parameters).
+
+\newpage
+\bibliography{Lec6}
+\bibliographystyle{plainnat}
+\end{document}

@@ -1,0 +1,280 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{April 6}{Alessandro Pellegrini}{9}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+\section{Interprocessor Interrupts}
+
+Interrupts generated at hardware level but processed at software level. The sending is a synchronous operation while the receiving is asynchronous. A portion of the kernel code is sending a message to another core. 
+
+There are 2 priorities: High and low. High will be processed immediately (but still asynchronous). Low are serialized, in a sort of FIFO order. IPIs are sent through the ICR register and there is a Destination field that lets you choose to which core to send the interrupt. The Linux kernel uses 251-255 entries in the IDT associated to IPIs.
+
+What is related to interrupt requests it is because some hardware component is asking for the attention of the cpu. Traps is about dealing with something generated by software. init\_IRQ setups the interrupts related to the devices on board on the machine. In order to do it it uses the ACPI to discover the devices in the system. With this function it reads from memory the acpi table and establish the irq and finalizes the initialization of the IDT. ACPI is a std used for describing the
+hardware. ACPI is composed of a set of vectors and tables and from the flags and codes it can understand what irqs needs to install in the idt.
+
+Three main functions that manipulate some bits to setup an entry in the idt. set trap gate will initialize one idt entry setting 0 the privilege level. system gate the privilege level is 3, the function that setups the entry for interrupt 80. Set intr ensures interrupts are cleared before entering the handler. 
+
+\section{Interrupt Management}
+\label{sec:intman}
+
+Entries 0 to 19 are about hardware interrupts such as division by 0. These low level
+interrupts are managed by a dispatcher. This dispatch depending by the parameters will call
+the right handler and will pass the parameters on the stack. Similar to the way system
+calls are handled. When receiving the interrupt a handler is called (the same), will call a single dispatcher. Why the handler is needed? The dispatcher expects to find something in the stack which is related to the actual handler management. Depending on the type of interrupts some parameters may be missing. The handler identifies the handler that should be activated and pushes the pointer to the handler in the stack. The dispatcher saves the context of execution, it is only
+a way to keep the code smaller.
+
+
+page fault handler doesn't have push 0 because the cpu already pushes some
+parameters in the stack. Some interrupts already push some parameters on 
+the stack, some don't therefore the early handler pushes for them.
+
+\texttt{error_code} takes a snapshot of the cpu similarly to software traps. The
+difference is that the info is organized on stack in the same way of the 
+struct \texttt{pt_regs}. And then calls the actual handler with the pointer
+to the struct.
+
+\texttt{do_page_fault} handler has the first param the pointer to ptregs and
+then an error code which is pushed by the firmware (is a bitmask in which
+only the three last bits are meaningful) and tells what is the meaning of the
+fault. Description at pg 167. In the cpu context you can also inspect the
+instruction pointer which will tell which instruction was trying to access
+memory but not which page it was trying to access. There is one specific
+control register which is cr2 that is written by the firmware with the
+address of the page that triggered the page fault. This is related to
+User Space applications.
+
+\section{Kernel Exception Handling}
+\label{sec:Kernel Exception Handling}
+
+What happens when kernel mode code tries to access a pointer passed by
+user space code. It uses verify area to check that are but there are some
+performance issues. Much of the user space code uses system calls and these
+functions are expensive. But we don't want to enter directly that memory region
+triggering a page fault. Kernel crashes. After crash it activates fixup that
+tries to restore the kernel to a working point. The kernel code has a label called \texttt{bad_area} that tries to find an instruction to restore
+the kernel. Bad area reads the eip and checks the error code to find 
+if the exception was triggered in kernel mode. It uses this address to
+find an instruction to fix this state. How is the fixup address found? 
+
+Example: get user takes some data from userspace to kernel space.
+
+Two non standard sections are defined in the executable: fixup and ex table.
+the former executable while the latter only readable (exception table). The
+compiler will put that code to the end of the executable. Once the exception
+is generated from the ip we look into the exception table finding that
+address and finds the next address and puts it into the struct ip returning
+to the dispatcher. The fixup address is just moving some negative value
+to eax and xor dl which tells the amount of data loaded by user spece and 
+finally jumps to the next instruction. 
+
+What we saw was for 32bit but in 64 bit either use offset from the table or
+enlarge the table to 64bit.
+
+\section{IPIs}
+\label{sec:IPIs}
+
+There is no way to describe a payload telling what has to be done by the
+CPU delivering the interrupt.
+
+Kernel panics use IPIs to freeze all the processors. It doesn't have any
+payload. INVALIDATE TLB VECTOR is a vector in the IDT used to sync all cores
+to flush tlb entries. Is mapped to all except self. Call function vector is
+used to run some specific function that is passed by the sender. SMP call
+function. 
+How are IPI messages generated? Through the IPI apis. The kernel uses fixed
+memory locations in which the sender can put some data and receivers look in
+order to understand what they have to do. The access to the location is managed
+through a spinlock.
+
+\texttt{smp_call_function()}: takes three parameters: one function pointer
+one buffer and one flag. The flag tells whether it should be blocking or not.
+High or low priority. The function is the specific routine which the receiver
+of the interrupt should execute when receiving the ipi. Two global variables
+are used to pass the function and its parameters. First thing we do is check
+whether the interrupts are disabled. Then we take the spinlock that protects
+the data structure. Set the global variables. Set to atomic variables that
+tell how many cores have started to execute the routine and how many have
+finished. 
+
+\texttt{syncronize_all} used to synchronize all cores such that only one core
+is executing some stuff. still atomic counters used. It sets synch enter to
+the number of cpus that should execute the ipi and synch leave to the number
+of cores that received the message. Why preemption is disabled? Linux
+is a preemptable kernel. And preemption is done through a timer interrupt.
+Preemption can be disabled through masking interrupts (but too heavyweight) or
+through preempt disable that just increments a counter. The scheduler checks
+whether the counter is greater than 0 and if so it just returns instead of
+preempting the kernel. This is done since the stuff that is going to be executed
+will be executed in this thread and if it is preempted then the system would
+stop. This approach is mainly used to load kernel modules. 
+
+IPI messages are very heavyweight so they must be used in critical cases only.
+
+\section{Last steps in kernel initialization}
+\label{sec:Last steps in kernel initialization}
+
+rest init finally jumps to cpu idle. Halt brings the processor to a low power
+execution mode that does nothing. When an interrupt is delivered then if a
+process needs to be scheduled then it is scheduled otherwise hlt is performed
+again.
+
+\section{Kernel tree addendum}
+\label{sec:Kernel tree addendum}
+
+The first step is configuring the build of the kernel. After compiling the
+kernel we can also compile the modules. Then modules are installed through
+the module_install and then make install compresses and generates the kernel. 
+If wanted headers can be installed. Finally the initram image must be created.
+
+\texttt{mkinitcpio}. This is for an initial filesystem. (Memory mapped means
+what? ICR?)
+
+Kbuild files are a variant of the Makefile used by linux to determine which
+files should be compiled in what object for the final kernel image. 
+
+KBuild: obj-y tells compile in the image also some object. m compiles it as a
+module. 
+
+\newpage
+\bibliography{Lec9}
+\bibliographystyle{plainnat}
+\end{document}
