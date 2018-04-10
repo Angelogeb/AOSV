@@ -78,7 +78,8 @@
        \vspace{4mm}
        \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
        \vspace{2mm}
-       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj,
+       Beatrice Bevilacqua} }
       \vspace{2mm}}
    }
    \end{center}
@@ -143,27 +144,183 @@
 
 % **** YOUR NOTES GO HERE:
 
-The data structure pglist\_data holds the informations about all the available memory of a Numa Node. 
+\section{Memory Management}
+\label{sec:Memory Management}
 
-For each node there are different nodes. Within a physical numa node we have node\_zones that describes. Then there is the map and the size of the node.
 
-First zone is DMA, on x86 32 bit it is associated with the first physical 16MB. This is for Direct Memory Access. This is done because some DMAC are not capable of accessing other regions of memory. Linux reserves this for example also for disk access. Zone Normal is all the memory that the kernel has always mapped to its own virtual memory. Zone HIGHMEM is sometimes mapped by the kernel on some cases. It is usually used to remap. In x64 the notion of high memory is removed since the availability of addresses makes it easy to access portions of physical memory that are not mapped.
+As seen in the previous lecture there might be systems providing NUMA
+differently from Uniform Memory Access (UMA). Linux handles both cases similarly
+since UMA can be seen as a degenerative NUMA system having just one node.
 
-Zones are initialised after the kernel page table is setup by paging \_ init. We need a way to describe the physical available memory. The kernel has still some init areas that need to be wiped etc. The kernel must know which free pages are available. The zones are a description of available physical memory. 
+Each node is described by \texttt{struct pglist_data} (typedefined to
+\texttt{pg_data_t}) even if the architecture is UMA. All the nodes structs are
+linked together forming a linked list called \texttt{pgdat_list}. In the UMA
+case only one \texttt{pg_data_t} structure called \texttt{contig_page_data} is
+used. From the kernel version 2.6.16 the \texttt{pgdat_list} has been replaced
+by a global array called \texttt{node_data[]} and the iteration over it
+is done through macros defined in \texttt{include/linux/mm/zone.h}.
 
-In the node version of the api is used for initialising the data structure of a node. Each node has the data structure stored in its own.
+Each node is divided into a number of blocks called \textit{zones} which
+represent ranges in physical memory. A zone is described by \texttt{struct
+zone_struct} typedefined to \texttt{zone_t} namely \texttt{ZONE_DMA,
+ZONE_NORMAL, ZONE_HIGHMEM}.
 
-During the POST phase the BIOS can know how much physical memory is available and setups a table called e820 table, stored in memory that has info related on how much physical memory is available and which are the regions available or not (for example in BIOS shadow initialisation telling "there is the bios here"). PFN is the number of physical available memory in ram. The 3rd entry is used by the kernel and the very beginning by the IVT.
+\begin{description}
+    \item \texttt{ZONE_DMA (0:16MB) } on x86 32 bit is associated with the first physical 16MB and
+is used for Direct Memory Access. This is done to remain compatible with
+constrained devices that are not capable to address more then 16MB. In Linux it
+is also for disk access (?).
+    \item \texttt{ZONE_NORMAL (16MB:896MB) } is the range of memory that is always mapped to
+        the kernel's virtual memory.
+    \item \texttt{ZONE_HIGHMEM (896MB:End) } is present if there is more
+        physical RAM than can be mapped into the kernel address space. Thus it
+        is not directly mapped to the kernel's virtual address space, instead it is remapped whenever it is
+        needed. In x86 64 bit this zone is not present since the kernel virtual
+        address space is not confined to 1GB therefore all physical memory can
+        be directly addressed by the kernel virtual space.
+\end{description}
 
-The description of a node has a zone\_t data structure that has free area entry inside, that is used by allocators. It has also a spinlock that might be a bottlenech.
+\begin{center}
+  \includegraphics[width=0.8\textwidth]{structrel.png}
+  \marginnote{\fig{1}{0 pt}{Relationships between structs. Note that there are multiple
+  \texttt{pg_data_t} linked together.}}[-5cm]
+\end{center}
 
-For each node there is a pg data t which has zones (usually 3). Each zone has a memory map that tells which are the available pages in that zone. 
+To each page frame in the system there is associated a \texttt{struct page}
+element that holds all the information needed by the kernel to manage that
+frame. All the structs are kept together in a global array called
+\texttt{mem_map}.
 
-Core Map is used to describe the memory in ZONE NORMAL, tells how much available physical memory in ZONE NORMAL there is. You have to look this Data Structure to know how to allocate memory. We're talking about kernel dynamic memory allocation. There is no heap in the kernel.
+We are going to describe all the structs represented in Figure 1 starting from
+the top of the image.
 
-It has a list that has the list of pages, usage count and some flags. The list is a free list. All the available physical frames are kept in a free list making the allocation quick not having to check some bitmap. The counter counts the virtual references mapped to a frame. One single frame could be mapped by multiple virtual addresses for example in memory sharing. The flags describe how that specific page can be used.  (list head keeps the pointer to next and previous).
+\marginnote{
+    \texttt{pgdat_list} is created incrementally at each
+    \texttt{init_bootmem_core} call by prepending each \texttt{pg_data_t}
+}[-2cm]
 
-Free area initialisation is done in free area init. The frame has no virtual reference and the frame is reserved. Since both bootmem and the steady state allocators are both working we must be careful to not have conflicting actions between the two. By PG reserved we ensure that the stedy state allocator will not do anything until bootmem is "removed". Mem init will then reset that flag.
+
+\begin{verbatim}
+> include/linux/mmzone.h
+typedef struct pglist_data {
+    zone_t node_zones[MAX_NR_ZONES];
+    zonelist_t node_zonelists[GFP_ZONEMASK+1];
+    int nr_zones;
+    struct page *node_mem_map;
+    unsigned long *valid_addr_bitmap;
+    struct bootmem_data *bdata;
+    unsigned long node_start_paddr;
+    unsigned long node_start_mapnr;
+    unsigned long node_size;
+    int node_id;
+    struct pglist_data *node_next;
+} pg_data_t;
+\end{verbatim}
+
+
+\texttt{node_zones[]} holds the \texttt{zone_t} structs for each zone.
+
+\texttt{node_mem_map} is the pointer to the first \texttt{struct page} within
+\texttt{mem_map} that belongs to this node (all the other \texttt{struct page}s of the node follow
+contiguously in \texttt{mem_map}).
+
+\texttt{node_size} is the total number of page frames belonging to the node.
+
+\texttt{node_next} is the pointer to the next node in the list
+\texttt{pgdat_list}.
+
+In the i386 architecture (in which just UMA is supported) the only node
+\texttt{contig_page_data} is initialized in \texttt{free_area_init()}
+(\texttt{mm/page_alloc.c}) and \texttt{zone_t} fields are filled thanks to the
+parameters discovered beforehand through the E820 facility passed to this
+function. In the NUMA case (64 bit) node initialization is done in \texttt{setup_arch()} which
+indirectly will call \texttt{free_area_init_node()} (\texttt{mm/numa.c}). Both
+functions (\texttt{free_area_init_x}) will eventually call
+\texttt{free_area_init_core()} (\texttt{mm/page_alloc.c}) that performs the
+setup of the data structures described below.
+
+During the POST phase the BIOS discovers how much physical memory is
+available and setups a table called E820, which contains information about how
+much physical memory is available and which are the usable regions
+(for example in case of shadow-ram initialization the BIOS must inform the
+kernel that some portion of memory is not available since it stores BIOS
+routines).
+
+\newpage
+
+\begin{verbatim}
+> include/linux/mmzone.h
+typedef struct zone_struct {
+    spinlock_t lock;
+    unsigned long free_pages;
+    zone_watermarks_t watermarks[MAX_NR_ZONES];
+    unsigned long need_balance;
+    unsigned long nr_active_pages,nr_inactive_pages;
+    unsigned long nr_cache_pages;
+    free_area_t free_area[MAX_ORDER];
+    wait_queue_head_t *wait_table;
+    unsigned long wait_table_size;
+    unsigned long wait_table_shift;
+    struct pglist_data *zone_pgdat;
+    struct page *zone_mem_map;
+    unsigned long zone_start_paddr;
+    unsigned long zone_start_mapnr;
+    char *name;
+    unsigned long size;
+    unsigned long realsize;
+} zone_t;
+\end{verbatim}
+
+\texttt{lock} is used to protect the zone from concurrent accesses.
+
+\texttt{free_area[]} is an array of structs used for memory allocation by the
+Buddy System.
+
+\texttt{zone_mem_map} similarly to \texttt{node_mem_map} points to the first
+\texttt{struct page} of \texttt{mem_map} that belongs to this zone.
+
+\begin{verbatim}
+> include/linux/mm.h
+typedef struct page {
+    struct list_head list;
+    struct address_space *mapping;
+    unsigned long index;
+    struct page *next_hash;
+    atomic_t count;
+    unsigned long flags;
+    struct list_head lru;
+    struct page **prev_hash;
+
+    #if defined(CONFIG_HIGHMEM) || defined(WANT_PAGE_VIRTUAL)
+        void *virtual;
+    #endif
+} mem_map_t
+\end{verbatim}
+
+\texttt{list} is a field used to link this \texttt{struct page} to other
+\texttt{struct pages} forming a list of pages satisfying a certain property
+(e.g. free pages, dirty pages, locked pages etc.).
+
+\texttt{count} tells the number of processes that are using that page frame (). If
+it is 0 then it can be put into the list of free pages (usable).
+
+\texttt{flags} describe the status of the frame. 
+
+\texttt{virtual} is used for pages in the highmem area.
+virtual then accepts the virtual address of the page if it is mapped to the
+kernel address space.
+
+When pages are initialized in \texttt{free_area_init()} the count field is set
+to 0 and \texttt{PG_reserved} bit within the \texttt{flags} field is set to 1
+so that no memory allocator except for bootmem (which doesn't rely on these data
+structures) can allocate that frame. This is done because the Main Memory
+subsystem of the kernel will not use the bootmem allocator anymore in its steady
+state but new kinds of allocators and therefore it must ensure that there aren't
+conflicts between the two.
+
+Frame un-reserving is performed in \texttt{mem_init()}
+(\texttt{arch/i386/mm/init.c}) and it will allow the steady state allocator to
+start working.
 
 \section{Buddy System}
 
