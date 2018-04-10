@@ -1,0 +1,349 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{April 10}{Alessandro Pellegrini}{10}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+Init has to read from disk the configuration files and determine the  service
+related to this target. In unix the virtual file system (VFS) allows to read
+such file. In unix everything is a file: pipes, devices, etc. The VFS abstracts
+everything related to driving the devices. There is one representation in RAM of
+the filesystem either partial or full structure of the file system. The
+representation in RAM allows to navigate in a fast manner the filesystem. Acts
+as cache for data or metadata about what is saved in secondary storage. The
+filesystem independent part is the interface for working with files while the
+dependent part is about using drivers etc.
+
+Every FS object is represented via specific data structures in RAM. Usage of
+function pointers allow to access different devices through the same interface.
+
+File system is complicated in terms of data structures. In start kernel it is
+initialized. init rootfs initializes the ram filesystem. The ram fs will mount
+the root fs and unload the ramfs. The virtual fs is so modular that you can run
+linux without fs except the parts of the vfs for accessing some devices.
+
+Since we're dealing with multiple kinds of file systems we must know how to
+identify a specific file system type and deal with the data associated to it. A
+structure called file system type that gives info about the name of the
+filesystem. The kernel will resolve then the mounting through the name. read
+super is a function pointer associated with what the kernel should execute when
+mounting that device. The kernel will look into the partition table to know the
+structure and through the type name will use. One can register a filesystem. In
+the usb or device is written the type of filesystem stored.
+
+
+rootfs type (global variable) is registered by init rootfs. rootfs mount is
+specific for the rootfs and is the function executed for mounting the filesystem
+while kill sb is the function for unmounting and this one is generic.
+
+The monting of the rootfs is performed in init mount tree. Four ds are involved:
+inode vfsmount etc. This datastructure keep information of various portions of
+the fs. They have pointers and they use pointer to each other as a graph.
+vfsmount and superblock describe the attributes of a specific instance of the
+filesystem.vfsmount describes relations across different filesystems for example
+when mounting some filesystem into another filesystem. It also knows that when
+unmounting some filesystem you cannot since another fs is linked in a lower
+level of the hierarchy.
+
+vfsmount is the organization of the 3.0 kernel. mnt parent is the pointer to the
+parent of the current vfsmount.
+
+dentry stands for directory entry or dirent. This is a cache, information about
+some elements of a path independently of the physical representation of the
+system. Represents the root of the mounted tree. superblock keeps information
+about how to manage the fs as a whole. A couple of lists used to enter
+childrens. A counter tells how many times the fs has been mounted. How many
+instances are in the system: one can mount the same fs on multiple points.
+Flags. Strings are used for the name of the device.
+
+superblock keeps a pointer to file systme type. A pointer to dentry which keeps
+the root of the filesystem. A list of dirty inodes to know what data should be
+written back to memory. 
+
+The super operation pointers is a struct of pointers telling how to manage this
+block.
+
+dentry is the ds used to navigate the filesystem. From it we can go to the inode
+to access the data on disk. inode keeps the pointer. dparent is the only parent
+of the dentry. a set of different childrens are kept. dname keeps the full name
+while diname keeps the short name. lockref is a structure that keeps both a lock
+and a reference counter (atomically increased and checked whenever tried to be
+modified). A pointer to the superblock it belongs. Multiple lists are used for
+dealing with concurrent access.
+
+qstr used for long names is a quickstring. A pointer to some buffer where the
+string is located. What happens when we need to do a strcmp btw qstrings? too
+expensive, hash used instead to speedup the comparison.
+
+inode organization: is the companion of the dentry. Here we need to
+differentiate the code used to manage the inode. Inodeops keeps a set of
+function pointers which specify what to do for spacific operations (ram
+representation of the node). fileops used for managing the data in disk through
+drivers. waitqueue used to put to sleep processes when it needs to wait for some
+device for performing some tasks.
+
+Logically every filesystem can be mounted on any dentry.
+
+Back to the initialization of the root filesys. It allocates the four ds needed
+and link them. Sets the name / to the rootfs and links the idle process to
+rootfs. Every process lives in a specific directory of the fs callent current
+process directory. The idle process is linked to rootfs which is the only fs
+living on system startup. 
+
+\texttt{init_mount_tree} at a certain point calls vfs kern mount that mounts the
+rootfs. current is a reference to the process/kernel thread that is currently
+running in the current processor.
+
+Let's look to fs in the Process Controle block. At any time one must know the
+actual process working directory and the root folder. fs struct has two pointers
+pointing to the root node fs and the working directory. In kernel 3.0 fs struct
+is modified: count and lock are changed to a spinlock and a sequence counter.
+Different way to deal with concurrency in the kernel. Rewrite of the concurrency
+from coarse grained to finer grained. the other entries are moved to root and
+pwd that speedup some stuff and solves issues not specified in posix. Problems
+with symlinks which are elements in the fs that point to different elems in the
+fs. the two entries might belong to different vfsmounts and since the latter is
+not linked to the dentries we must put the pointers.
+
+superblock ops allow to manage statistics, create and manage inodes. some fsops
+might just not do nothing for example ramfs. The organization is in struct super
+operations. One function pointer for each op that must be supported in the fs.
+put inode means that you don't need anymore therefore it can be disposed. put
+super, dispose the superblock (usually done for unmounting). These operations
+are for ram operations. destroy forces the other threads to stop using that
+inode.
+
+Ramfs is easy and doesn't need to actually drive any device. 
+
+dentry ops ddelete decrements a counter and if it reaches 0 it also puts it.
+
+inode ops allows to creat, link, unlink etc. Lookup op is important since it
+tells that i'm looking the fs to find something. you can have inodes for
+different things for example for a file or device. mknod creates a generic
+inode.
+
+inodesops in the ramfs: lookup has nothing strange. Some functions are generic
+others are specific for the ramfs.
+
+nameidata.c is a subsytem into the VFS subsystem that takes care of handling
+names meaning some path in the vfs. Taking care of the different natures. This
+allows to lookup some elements in the fs abstracting and taking care of the
+different elements in the VFS. It is used to manipulate strings for paths and
+perform lookups.
+
+\section{VFS Intermediate Functions}
+\label{sec:VFS Intermediate Functions}
+
+\texttt{path_lookupat} lookups some elements of the filesystem. nameidata is
+used to return information. It does a tree walk through \texttt{walk_component}
+used to reach the latest component. Flags tells whether to follow symlinks and
+other stuff. struct path allows also for relative paths.
+
+vfs mkdir creates a new inode. dir points to the parent inode and modes
+specifies the access rights. dget dentry acquires a dentry and increments the
+counter. dput tells that the dentry is not needed decrementing the reference
+count. If it goes to 0 it is removed from  memory. Recursively is checked if
+also the parents are needed anymore. domount mounts a device into a target
+directory.
+
+dhash and lookup is introduced in newer versions of the kernel. Tells the qstr
+is a new structure so the hash function is not computed yet. this function will
+hash it and will rely on dlookup. dlookup expects a hash.
+
+vfscreate creates an inode related to some dentry.
+
+VFS functions are used by kernel modules if you're not reimplementing the fs.
+With the other functions you might mess the ram representation of the filesystem
+and maybe also disk.
+
+kernel init will initialize the vfs and the execution of init. do basic setup
+initializes drivers etc. prepare namespace waits for all devices to complete the
+startup. Mounts the dev pseudofolder and will load also the initramfs into
+kernel memory from ram and finally mounts it in /.
+
+run init process will perform many try to run init process through the execve.
+
+How does linux manage devices? a device has a number associated to it. In old
+versions from 0 to 255. These were actually associated to the family of devices.
+Indeed linux uses MAJOR and MINOR number. the former is used to access a driver
+database to know how to interact with that device.
+
+Linux sees each partition as a different devices. But they belong to the same
+family and therefore have the same MAJOR number because it is accessed in the
+same manner but the different instances are differentiated through the MINOR
+number. The minor number is assigned by either the kernel or driver. 
+
+There are two kinds of devices mainly: char or block. The former can return any
+number of bytes while the latter return a fixed number of bytes.
+
+The kernel keeps the info to know the type of device.
+
+family: char or block then within the family the major number.
+
+\section{Device Database}
+\label{sec:Device Database}
+
+cdev and bdev maps are the databases keeping the information about the devices.
+In kernel 2.6 kernel objects were defined. There can be 255 elements for each
+database. Each database is protected by a block. This is implemented as an
+hashmap and accessed through the major number. module points to the driver to
+manipulate that device. data points to a datastructure.
+
+cdev struct describes character devices. This is the one pointed by data. The
+first element is kobject. A pointer to file operations that tell how they are
+implemented for the specific device and a list head since it can be chained
+somewhere. randomize layout enables to take the members of the struct and
+shuffle them.
+
+kobject is a generic object that has a name, can belong to a list or a set. Has
+a specific type and can be related to the sysfs.
+
+list head in kobject points to the cdev.
+
+with char devices you might have some driver wanting to reserve some minor
+numbers. For each major you can define a set of minors from baseminor to
+baseminor + minorct.
+
+\newpage
+\bibliography{Lec10}
+\bibliographystyle{plainnat}
+\end{document}
