@@ -271,7 +271,8 @@ typedef struct zone_struct {
 } zone_t;
 \end{verbatim}
 
-\texttt{lock} is used to protect the zone from concurrent accesses.
+\texttt{lock} is used to protect the zone from concurrent accesses and is used
+by the buddy system to protect the data structures from concurrent access.
 
 \texttt{free_area[]} is an array of structs used for memory allocation by the
 Buddy System.
@@ -323,13 +324,95 @@ Frame un-reserving is performed in \texttt{mem_init()}
 start working.
 
 \section{Buddy System}
+The kernel subsystem that handles the memory allocation requests for groups of
+contiguous page frames is called the \textit{zoned page frame allocator}.
+[undthelinkern pp. 302].
 
-Fast algorithm. Suffers of fragmentation. Recursively split and find the best fit for the requested memory. 
+The component named "zoned allocator" receives the requests for allocation and
+deallocation of dynamic memory. In the case of allocation requests, the
+component search a memory zone that includes a group of contiguous page frames
+that can satisfy the request. Inside each zone, page frames are handled by a
+component named "buddy system". The buddy system of all zones and nodes are
+linked together via the allocation fallback list. When a request for memory
+cannot be satisfied in the preferred zone or node, first another zone in the
+same node, and then another node is picked to fulfill the request.
 
-There is an array of free\_area\_t where the pointer to the free pages is kept into list head. The integer is used as a smart bitmap. 1 bit for a pair of buddies. Any time that you allocate or free one of the two buddies you invert the buddies. 1 means only one of the two buddies is in use while 0 that either both are available or none. 
+Free memory blocks in the system are always grouped as two buddies. The buddies can be
+allocated independently of each other; if, however, both remain unused at the
+same time, the kernel merges them into a larger pair that serves as a buddy on
+the next level.
 
-The mem alloc starts from higher order to lower to find which buddy is best. 
+The buddy system uses the \texttt{free_area[]} field of \texttt{zone_t} to perform
+memory allocation and deallocation. \texttt{free_area[]} is an array of structs
+defined as follows.
 
+\begin{verbatim}
+> include/linux/mmzone.h (v. < 2.6.10)
+typedef struct free_area_struct {
+    struct list_head    free_list;
+    unsigned long   *map;
+} free_area_t;
+\end{verbatim}
+
+\begin{center}
+  \includegraphics[width=0.8\textwidth]{freearea.png}
+  \marginnote{\fig{2}{0 pt}{\texttt{free_area[]} array data structure
+  representation within a zone}}[-3cm]
+\end{center}
+
+Each entry of the array is associated to an \textit{order} and holds in a list
+pointed by \texttt{free_list} memory blocks
+of size $2^{order}$ composed of contiguous \textbf{free} \texttt{struct page}s. Therefore
+order 0 contains blocks of single pages, order 1 contains blocks of $2^1$ pages,
+order 2 blocks of $2^2$ pages, up to \texttt{MAX_ORDER - 1} (\texttt{MAX_ORDER}
+usually set to 11). The list is formed by linking the blocks of the same size together through the
+\texttt{list} field of the first \texttt{struct page} belonging to the block.
+
+The \texttt{map} field of the struct points to a bitmap used for allocation and
+deallocation. Each bit represents a pair of buddies in the current order. It is
+set to 0 if both are allocated or both are free and it is set to 1 otherwise.
+
+\marginnote{\textsc{Allocation}}[6pt]
+When a request for allocating an area of a given order \texttt{ord} is issued,
+the buddy system tries to find a free block inside of
+\texttt{free_area[ord].free_list}. If the request can be fulfilled in the
+requested order \texttt{ord} then the block is returned and the bit in the
+bitmap is toggled. Otherwise the buddy system recursively searches for free
+blocks in higher orders, say it is found in \texttt{high_ord > ord},
+and splits the block into two blocks (called buddies), one put in the list of
+\texttt{high_ord - 1} (also toggling the bits in the bitmap) and the other
+recursively split into smaller blocks (buddies) until \texttt{ord} is reached.
+
+
+\begin{center}
+  \includegraphics[width=0.8\textwidth]{evol.png}
+  \marginnote{\fig{3}{0 pt}{Evolution of \texttt{free_area[]} when first
+  requesting a block of order 3 and then of order 1.}}[-6cm]
+\end{center}
+
+\marginnote{\textsc{Deallocation}}[6pt]
+
+When the block is later freed, the buddy will be checked. If both are free, the
+kernel will try to \textit{coalesce} the buddies together immediately. In the
+worst scenario the operation requires \texttt{MAX_ORDER} steps. To detect if the
+buddies can be merged or not, the bit corresponding to the affected pair of
+buddies in the bitmap is checked. As one buddy has just been freed by this
+function it is known that at least one buddy is free. If the bit in the map is 0
+after toggling, we know that the other buddy must also be free and thus they can
+be merged. Otherwise if the bit is 1, the other buddy is in use therefore the
+buddies cannot be merged and the block goes into its order list.
+
+All the memory operations performed by the buddy system require the acquirement
+of the \texttt{lock} found in \texttt{zone_t} therefore it can be a bottleneck
+for the responsiveness of the system since there can be contentions on the
+spinlock.
+
+Even though the algorithm is very fast, the frequent allocation and release of
+page frames and blocks may lead to a situation in which several page frames are
+free in the system but they are scattered (not contiguous) throughout the
+physical address space.
+Single reserved pages that sit in the middle of an otherwise large continuous free range can
+eliminate coalescing of this range very effectively.
 
 \section{High Memory}
 
