@@ -414,7 +414,130 @@ physical address space.
 Single reserved pages that sit in the middle of an otherwise large continuous free range can
 eliminate coalescing of this range very effectively.
 
+The finalization of memory management initialization is done in
+\texttt{mem_init()}.
+
+\begin{verbatim}
+> arch/i386/mm/init.c
+mem_init()
+    ...
+    free_pages_init()
+        ...
+        > mm/bootmem.c
+        free_all_bootmem()
+            free_all_bootmem_core() {
+                ...
+                for (i = 0; i < idx; i++, page++) {
+                    if (!test_bit(i, bdata->node_bootmem_map)) {
+                        count++;
+                        ClearPageReserved(page);
+                        set_page_count(page, 1);
+                        __free_page(page); //decrements page count and if 0
+                                           //adds page into the free list
+                    }
+                }
+                ... // free also bootmem map
+            }
+\end{verbatim}
+
+For each unallocated page in bootmem, the page flag \texttt{PG_reserved} is
+cleared (it was previously set on initialization by
+\texttt{free_area_init()} as said previously) and the \texttt{count} is set to 1
+in order to fake \texttt{__free_page()} into thinking that this is an ordinary
+deallocation for the buddy system which on decrementing \texttt{count} and
+checking that is 0 will put it into the free list.
+
+\subsection{Zoned Allocator APIs}
+
+\begin{verbatim}
+> mm/page_alloc.c
+// Allocation
+alloc_pages(gfp_mask, order)
+    Used to request 2^order contiguous page frames. It returns struct
+    page * of the first page of the block
+
+get_zeroed_page(gfp_mask)
+    it expands to alloc_pages(gfp_mas | __GFP_ZERO, 0) but instead of
+    returning a struct page * it returns the linear address of the page
+    frame allocated. The contents of the page are set to 0
+
+__get_free_page(gfp_mask)
+    Allocates one page frame and returns its linear addres
+
+__get_free_pages(gfp_mask, order)
+    similar to alloc_pages(gfp_mask, order) but returns the linear
+    address of the first page frame of the block
+
+// Deallocation
+free_page(addr)
+    frees a page given its linear address
+
+free_pages(addr, order)
+    frees a block given its linear address and its order
+
+__free_pages(page, order)
+    given a struct page * if its PG_reserved is set to 0 (page not
+    reserved) decreases the count field and if it becomes 0 it assumes
+    that 2^order contiguous page frames starting from the one corresponding
+    to page are no longer used
+
+__free_page(page)
+    expands to __free_pages(page, 0)
+\end{verbatim}
+
+\begin{center}
+  \includegraphics[width=0.8\textwidth]{allrel.png}
+  \marginnote{\fig{4}{0 pt}{Relationships between allocating functions}}[-3cm]
+\end{center}
+
+
+[prolinkern pp. 220 for flags]
+
+The \texttt{gfp_mask} parameter is a mask consisting of a set of flags that
+specifies to the zoned allocator the allocation context, such as \textit{zone
+modifiers} of the allocation (\texttt{__GFP_DMA, __GFP_HIGHMEM}) or others such
+as 
+
+\begin{verbatim}
+GFP_ATOMIC
+the allocation cannot be interrupted (the process cannot be put into sleep)
+since this is a urgent allocation.
+
+GFP_KERNEL and GFP_USER
+respectively used to allocate kernel memory and userspace memory
+
+GFP_NOFS (previously GFP_BUFFER)
+generic page, usually used to allocate a buffer
+
+\end{verbatim}
+
+
 \section{High Memory}
+
+High memory allocations can be performed only through the subset of APIs
+described above which return \texttt{struct page *}. This is done because page
+frames in the \texttt{ZONE_HIGH} area (above 896MB) do not have a permanent
+mapping in the linear address space of the kernel.
+
+The kernel uses three different mechanisms to map page frames in high memory;
+they are called \textit{permanent kernel mapping, temporary kernel mapping} and
+\textit{noncontiguous memory allocation} (this one described later). Memory
+allocation for high memory  is performed through \texttt{alloc_pages()} and \texttt{alloc_page()} APIs described above. These APIs return the
+linear address of the page descriptor (\texttt{struct page *}) of the first
+allocated page frame which always exist because all page descriptors are
+allocated in \textit{low memory} (\texttt{0:896MB}). The kernel then uses part
+of the last 128MB of its linear address space to map high-memory page frames.
+Trivially this kind of mapping is temporary otherwise only 128MB of high memory
+would be accessible.
+
+\begin{verbatim}
+vmap(struct page **pages, int count, unsigned long flags, pgprot_t prot)
+    Given an array of struct page * (even not contiguous) creates
+    the entries in the page tables to access the pages through a
+    virtually contiguous space
+
+
+\end{verbatim}
 
 vmap: long duration mapping for multiple physical pages.
 
@@ -430,18 +553,8 @@ All the CR3 registers point to the same page table since it is not useful to hav
 
 The struct pages hold the physical addresses of the pages that are then translated to virtual ones.
 
-Memory allocation is finalised with mem init. Destroys the bootmem allocator and releases all the frames used by bootmem through the PG reserved bit. free page is invoked for each page that is freed to give them to buddy. The page count is set to one and free page is called to fake the buddy into thinking that this was actual freed by some kernel subsystem.
-
-The memory allocator is general and doesn't know who is asking for the memory. Process context or Interrupt.
-
-API offered by the buddy system for kernel internal allocation (kernel modules etc.). Get zeroed page, zeros the content and return the virtual address.
-
-Get free pages increases the likelihood of fragmentation.
-
 free page puts back a page into the free list. Failing to pass addr or order might spoil the kernel.
 
-
-Allocations accept flags. GFP atomic won't put to sleep the asker, used for interrupt context. USER can put to sleep used for userspace. KERNEL is for kernel while BUFFER for buffers to pass data structures to userspace for example. Sleeping the kernel means the thread asking.
 
 In case of NUMA we must also tell which numa node we want to allocate memory etc. or in case of Get free pages returns any numa node etc. Various NUMA policies are specified on how the node is chosen and can be set through set mempolicy. nodemask tell which nodes are involved and maxnode how many bits of the maks need to be checked. The modes can be default which asks for memory from the same node in which the request is issued. bind is from where I was spawned. Interleave different node on each allocation. Preferred you choose.
 
