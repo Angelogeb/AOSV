@@ -1,0 +1,310 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{April 13}{Alessandro Pellegrini}{11}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+
+To register char devices there are some functions. You have to give a name to
+the device and specify the types of operations. If the major number is put to 0
+then you ask the kernel to give some available major number. To unregister you
+must specify the major number and the name. Unregistering doesn't mean to remove
+the device but means to unmount the modules for that device.
+
+Also for char devices we need file operations. The owner is the module that
+drives the devices.
+
+register chardev and alloc chrdev allow to identify the major number and minor
+number from which to start. In the first case you want a specific range of minor
+numbers therefore if one module is using one of them the call is going to fail.
+In the second case the kernel is going to scan for the availability of minor
+numbers and return the starting point.
+
+Block devices behave differently. In the last release block devices apis are
+exposed in genhd. The struct is gendisk and before it was called genhd. The
+struct describes a major, minor and minors (you can specify a range). Given a
+major you specify the maximum number of minors it can support i.e. the maximum
+number of partitions. request queue: the block device returns a block of data
+while the char device a stream. Since the former might take time the fops and
+queue are managed such that the scenario is controlled. 
+
+Block device ops are slightly different from file operations: we don't have
+anything for reading or writing a block device. Since it may take time to do
+those ops another strategy is used instead of a specific function pointer.
+
+There might be a plethora of requests waiting for a device and the developer of
+the module doesn't have an overview of it therefore another strategy is used.
+
+Request queues are the way to operate on block devices. Any time a process is
+put to sleep for waiting to some device the request queue is used.
+
+The struct inode there is a field called imode that tells the type of the inode.
+mknode creates a generic i-node. If the inode represents a device the kernel is
+going to look in the device database to findout the actual device that
+implements those operations. irdev is used in case imode tells that represents a
+char or block device to know the major and minor number.
+
+mknod syscall, given a pathname, mode and dev can be used to create some kind of
+node\marginnote{umask enables to specify some permissions of the process/users}.
+Regular, char, block, pipe. dev is used only if block or char is the node type.
+
+for interacting with char devices the linux kernel uses a generic function
+called chrdev open. Open is mapped to vfs open that which will perform some
+pathname lookup to find the inode, will find out that it is a char device and
+then handouts the opening to the char devices subsystem through chrdev open.
+the function will issue a call to a function called kobject lookup, allows to
+find some specific object in the kernobj subsystem. From the kobj we can
+navigate to the cdev and finally to ops. Since this full walk is costly the
+pointer to ops are cached in the inode. Therefore if we would like to
+dynamically change the pointers of our fops we cannot do that because of
+caching. Therefore we do a switch case in a generic function pointer that will
+multiplex the ops depending on something.
+
+source is kind of the partition \texttt{/dev/sda1}. As soon as we connect a
+device that device will appear in \texttt{/dev}
+mount target is the target vfs where we want to mount this fs. the type is the
+one of the source, mountflags specifies how we want to mount the filesystem for
+example saying if we want it to not be executable. We can remount to for example
+change from rdonly to write.
+
+A mount point is identified through the member dflags in dentry. DCACHE MOUNTED
+specifies that dentry is associated to a mount point and not to any file.
+The lookup function skips dentries of this kind.
+
+RCU inside the PCB.
+RCU (Read Copy Update). The counter in the file descriptor table tells how many
+entities are using the filesstruct. struct fdtable is the actual file descriptor
+table and a pointer to the same table. Therefore an actual field and the pointer
+to the field. You take the pointer which is the consistent state (maybe older)
+of the filesystem. The directive rcu tells the compiler how to use the pointer.
+There is a spinlock for doing stuff and it is cached aligned. next fd tells
+the kernel where to start to look for an available file descriptor.
+
+fdtable contains two bitmaps. Once you fork and exec you inherit descriptors by
+default. To disallow some inheritance of the file descriptors the close on exec
+is used. The process must specify the flag when opening a file. Open fds speeds
+up the lookup for available file descriptors. Since there might be portions of
+the openfds bitmap that are full of 1s then the fullfdsbits contains 1 and 0s
+for each group of bits in openfds.
+
+\begin{verbatim}
+    openfds 10010010 11111111 00110011
+    fullfds        0        1        0
+\end{verbatim}
+
+file struct. fpos keeps track the position of the cursor telling where the last
+read has arrived and the lseek. fcred keeps credentials to specify different
+capabilities of the users to manage the file.
+
+How is a file opened? open eventually calls dosysopen and then a set of
+additional calls. You must have an available file descriptor and then the struct
+file is allocated. In the second part you ask the vfs to do the actual opening
+of the file: do filp open. This call will return the struct file associated to
+the file. 
+
+In the pcb there is a namei ds (pointer) associated to the current path in which
+the process is living (different from working directory). 
+
+The pathopenat gets a file descriptor fileld of zeros through get empty filp
+(taken from slab).
+
+IS ERR and PTR ERR allows to use a pointer for returning an error code.
+
+get unusued fd flags. Through files fdtable you get a snapshot of the file
+descriptor table.
+
+must check tells the compiler to  generates warnings if the
+call to the macro doesn't check the return value.
+
+The definition o a syscall if wrapped in syscall define macros. Similar to the
+generation of stubs in userspace. This boils down to an asmlinkage defined
+function. closefd releases the file descriptor and invokes the closing function
+and discards the ds not needed anymore. eventually it calls put unusued fd, the
+data structure is not used anymore. filpclose findsout the file operation to be
+executed to close the file and decrement the reference counters into dentries
+and inodes evenutally putting them.
+
+donitify flush disposes the dentry. Remove the locks in the struct file.
+
+close fd
+
+put unusued. clear sets bit to 0 in the bitmap, next fd is put to the one one
+now empty.
+
+write
+
+vfs write is a wrapper to the actual write. Security checks on the pointer and
+then call the underscore version.
+
+read syscall, get fd, check if file associated, check the position etc.
+
+\section{Proc file system}
+\label{sec:Proc file system}
+
+In memory filesystem that exposes informations to the user about processes
+running in the machine.
+
+
+proc dir entry used to simplify the management of proc opearations which are
+very specific. 
+
+\section{Sysfs File System}
+\label{sec:Sysfs File System}
+
+Creates a mapping btw kernel objects and file system. Used also to pass
+parameters to kernel modules.
+
+ksests is a data structure embedding kernel objects.
+
+
+In the early days of linux when inserting a device the entry in \texttt{/dev}
+would appear. At some point they gave the control to create the entries to the
+user space programs. The kernel module only setups some kernel objects.
+
+udev listens for new files in \texttt{/sys}. dbus for notification.
+
+The driver must create the kobj for sys otherwise it won't be mounted.
+
+\newpage
+\bibliography{Lec11}
+\bibliographystyle{plainnat}
+\end{document}
