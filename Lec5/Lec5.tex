@@ -283,11 +283,15 @@ TLB. This is done in \texttt{paging_init()} by calling
         asm volatile( "movl %0, %%cr3": : "r" (__pa(pgdir)) );
 \end{verbatim}
 
-As shown above, in \texttt{\%cr3} is written \texttt{swapper_pg_dir} again.
-This is done because most of the \texttt{i386} architectures ensure that
-the TLB is flushed if the \texttt{\%cr3} register is rewritten. Despite that
-there can be some architectures that need further instructions to ensure that
-the TLB is indeed flushed and in that case this is ensured by
+As shown above, in \texttt{\%cr3} is written \texttt{swapper_pg_dir}.
+This is done because the page tables used up to now might not be the ones
+in \texttt{swapper_pg_dir} (following the execution path from
+\texttt{arch/i386/kernel/head.S}) but the ones setup by the boot process
+which might have launched the kernel from a different entry point.
+Most of the \texttt{i386} architectures ensure that
+the TLB is flushed if the \texttt{\%cr3} register is written but
+there can still be some architectures that need further instructions to ensure that
+the TLB is indeed flushed and in that case this is done through
 \texttt{__flush_tlb_all()}.
 
 In newer versions of the kernel (v. 4.16) \texttt{load_cr3()} is
