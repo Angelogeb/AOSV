@@ -183,7 +183,7 @@ is also for disk access (?).
 \begin{center}
   \includegraphics[width=0.8\textwidth]{structrel.png}
   \marginnote{\fig{1}{0 pt}{Relationships between structs. Note that there are multiple
-  \texttt{pg_data_t} linked together.}}[-5cm]
+  \texttt{pg_data_t} linked together. (\cite{gorman_2004} pp. 16)}}[-6cm]
 \end{center}
 
 To each page frame in the system there is associated a \texttt{struct page}
@@ -235,9 +235,11 @@ In the i386 architecture (in which just UMA is supported) the only node
 parameters discovered beforehand through the E820 facility passed to this
 function. In the NUMA case (64 bit) node initialization is done in \texttt{setup_arch()} which
 indirectly will call \texttt{free_area_init_node()} (\texttt{mm/numa.c}). Both
-functions (\texttt{free_area_init_x}) will eventually call
+functions (\texttt{free_area_init*}) will eventually call
 \texttt{free_area_init_core()} (\texttt{mm/page_alloc.c}) that performs the
 setup of the data structures described below.
+\marginnote{\texttt{free_area_init*} is indirectly called by
+\texttt{paging_init}}[-36pt]
 
 During the POST phase the BIOS discovers how much physical memory is
 available and setups a table called E820, which contains information about how
@@ -302,7 +304,7 @@ typedef struct page {
 \texttt{struct pages} forming a list of pages satisfying a certain property
 (e.g. free pages, dirty pages, locked pages etc.).
 
-\texttt{count} tells the number of processes that are using that page frame (). If
+\texttt{count} tells the number of processes that are using that page frame. If
 it is 0 then it can be put into the list of free pages (usable).
 
 \texttt{flags} describe the status of the frame. 
@@ -325,15 +327,16 @@ start working.
 
 \section{Buddy System}
 The kernel subsystem that handles the memory allocation requests for groups of
-contiguous page frames is called the \textit{zoned page frame allocator}.
-[undthelinkern pp. 302].
+contiguous page frames is called the \textit{zoned page frame allocator}. \marginnote{(\cite{bovet_cesati_2006} pp. 302),
+(\cite{mauerer_2010} pp. 14, Sec. 3.5.1) (\cite{gorman_2004} Chap. 6)  }
 
 The component named "zoned allocator" receives the requests for allocation and
 deallocation of dynamic memory. In the case of allocation requests, the
-component search a memory zone that includes a group of contiguous page frames
+component searches a memory zone that includes a group of contiguous page frames
 that can satisfy the request. Inside each zone, page frames are handled by a
 component named "buddy system". The buddy system of all zones and nodes are
-linked together via the allocation fallback list. When a request for memory
+linked together via the allocation fallback list (\texttt{node_zonelists}).
+When a request for memory
 cannot be satisfied in the preferred zone or node, first another zone in the
 same node, and then another node is picked to fulfill the request.
 
@@ -445,9 +448,11 @@ cleared (it was previously set on initialization by
 \texttt{free_area_init()} as said previously) and the \texttt{count} is set to 1
 in order to fake \texttt{__free_page()} into thinking that this is an ordinary
 deallocation for the buddy system which on decrementing \texttt{count} and
+\marginnote{(\cite{gorman_2004} Chap. 6), (\cite{mauerer_2010} Sec 3.5.4)}[2cm]
 checking that is 0 will put it into the free list.
 
 \subsection{Zoned Allocator APIs}
+
 
 \begin{verbatim}
 > mm/page_alloc.c
@@ -530,41 +535,165 @@ of the last 128MB of its linear address space to map high-memory page frames.
 Trivially this kind of mapping is temporary otherwise only 128MB of high memory
 would be accessible.
 
-\begin{verbatim}
-vmap(struct page **pages, int count, unsigned long flags, pgprot_t prot)
-    Given an array of struct page * (even not contiguous) creates
-    the entries in the page tables to access the pages through a
-    virtually contiguous space
+\begin{description}
+    \item \texttt{vmap(struct page **pages, int count, unsigned long flags,
+        pgprot_t prot)} \marginnote{(\cite{mauerer_2010} pp. 250)}
+
+        Given an array of \texttt{struct page *} (even not contiguous) creates
+        the entries in the page tables to access the pages through a
+        virtually contiguous space. When freeing \texttt{vmap}ped area through
+        \texttt{vunmap} eventually \texttt{vmfree_area_pages}
+        (\texttt{mm/vmalloc.c}) will be called which will also flush the TLB on
+        all cores.
+
+    \item \texttt{kmap(struct page *)} \marginnote{(\cite{mauerer_2010} Sec.
+        3.5.8)}
+
+        Given a page descriptor, maps the physical addresses of that page to
+        the virtual address space of the kernel in highmem starting with virtual
+        address \texttt{PKMAP_BASE}. These pages are also
+        known as "Permanent Kernel Mappings". There is a dedicated Page Table
+        (last level) in the kernel page tables of which address is stored in
+        \texttt{pkmap_page_table} to handle this kinds of mappings.
+
+        An array of
+        counters \texttt{pkmap_count[LAST_PKMAP]} each referring to an entry of
+         \\ \texttt{pkmap_page_table} is used for management. If a counter is 0 it
+        means that the corresponding PTE is not used for mapping any high-memory
+        page frame and is usable. If it is 1 it means that the PTE does not map any
+        high-memory page frame but it cannot be used since the corresponding TLB
+        entry has not been flushed since its last usage. If the counter is $n$
+        the corresponding PTE maps a high-memory page frame which is used by
+        exactly $n-1$ kernel components ($n-1$ components have called
+        \texttt{kmap} on the same \texttt{struct page *}. Note that if a page
+        frame was already \texttt{kmap}ped and \texttt{kmap} is called again on
+        the very same page frame, then the second call will return the same
+        virtual address of the first).
+
+        When mapping a page frame with no corresponding virtual address the
+        function tries to find an empty PTE in \texttt{pkmap_page_table} (i.e. a
+        PTE with counter 0), creates the entry, sets its counter to 2, 
+        and returns the virtual address assigned. When unmapping through
+        \texttt{kunmap} the counter is decremented (therefore it will be 1 when
+        no kernel thread references that page anymore). The TLB is flushed on all
+        cores through \texttt{flush_tlb_all()} only when all the PTEs have
+        counter 1. No errors caused by TLB caching can arise since if over time
+        two threads perform \texttt{kmap$_1$ -> kunmap$_1$ -> kmap$_2$} (where
+        the subscript tells the id of the thread performing the call and arrows
+        indicate the temporal sequence of events) with in betweeen them any
+        kind of operations, and both \texttt{kmap$_1$} and \texttt{kmap$_2$}
+        return the same virtual address there must have been a
+        \texttt{flush_tlb_all()} in between the first unmapping and the second
+        mapping according to the algorithm.
+
+        Note that in case of not available PTEs the kernel thread issuing a
+        \texttt{kmap} might be put to sleep until one is available
+        (\texttt{kunmap} issued). Also
+        since the number of available PTEs are those fitting in one page frame
+        the function must be used for mappings of not too prolonged time.
+
+\newpage
+
+    \item \texttt{kmap_atomic(struct page *page, enum km_type type)}
+
+        The \texttt{kmap} function described above must not be used in interrupt
+        handlers because it can lead to sleep. The kernel therefore provides this
+        alternative mapping function that executes atomically. When a thread
+        calls this function it becomes not preemptable until it issues
+        \texttt{kunmap_atomic}. To make a thread not preemptable the function
+        increases its \texttt{preempt_count} field. Before returning the
+        function ensures that the TLB of the processor on which the thread runs
+        doesn't have cached anything on the virtual address it is going to
+        return by calling \texttt{__flush_tlb_single(vaddr)}. By this fact, the
+        mapping is not visible to other processors. The function uses a portion
+        of virtual memory called fixmap.
+
+\end{description}
 
 
-\end{verbatim}
+\section{NUMA Allocation Policies}
+\label{sec:NUMA Allocation Policies}
 
-vmap: long duration mapping for multiple physical pages.
+Starting from kernel v. 2.6.18, there were added system calls that allowed userspace
+to specify a policy to honor during allocations. Note that such policies are
+followed also by the functions described above. The implementation of this
+system calls can be found in \texttt{mm/mempolicy.c} through the macro
+\texttt{SYSCALL_DEFINE*} which will be explained in future lectures.
+By policy it is meant on which
+node the kernel should allocate memory in a NUMA system.
+One of the main functions is
+\texttt{set_mempolicy(int mode, unsigned long *nodemask, unsigned long maxnode)}
+which sets the memory policy of the calling thread. The \texttt{mode} parameter
+can be one between
 
-kmap: short duration, needs global sync, all the cores running in kernel mode will see that mapping
+\begin{description}
+    \item \texttt{MPOL_DEFAULT}
 
-kmap atomic: short duration but only this cpu will see that mapping, used in interrupt handlers usually. 
+        Sets the policy for the calling thread to the system's default policy
+        which tries to allocate memory from the node requesting it and then to
+        close nodes. When specified in the \texttt{mbind} function (see below)
+        it follows the thread policy.
 
-Deallocation: vector of counters for each high memory page. 0 is not mapped, not used by anyone else. 1 just been released. more than 1 it is mapped multiple times. The release is done with kunmap that decrements the counter. When the counter goes to 1 means that no kernel thread is referencing that page.
+    \item \texttt{MPOL_BIND}
 
-On mapping we create a PTE.
+        This mode specifies that memory must come from the
+        set of nodes specified by the policy through \texttt{nodemask} and 
+        \texttt{maxnode}.  Memory will be allocated from
+        the node in the set with sufficient free memory that is closest to
+        the node where the allocation takes place.
 
-All the CR3 registers point to the same page table since it is not useful to have different views on memory. When counter 1 the PTE is removed and the tlb is flushed to be sure that all the cores remove that from tlb. 
+    \item \texttt{MPOL_INTERLEAVED}
 
-The struct pages hold the physical addresses of the pages that are then translated to virtual ones.
+        This mode specifies that page allocations be
+        interleaved, on a page granularity, across the nodes specified in
+        the policy.
 
-free page puts back a page into the free list. Failing to pass addr or order might spoil the kernel.
+    \item \texttt{MPOL_PREFERRED}
+
+        This mode specifies that the allocation should be
+        attempted from the single node specified in the policy.  If that
+        allocation fails, the kernel will search other nodes, in order of
+        increasing distance from the preferred node based on information
+        provided by the platform firmware.
+\end{description}
+
+\texttt{mbind(void* addr, unsigned long len, int mode, unsigned long *nodemask,
+\\ unsigned long maxnode, unsigned flags)} sets a NUMA policy for a range of
+addresses starting from \texttt{addr} to \texttt{addr + len}.
+
+The system call \texttt{move_pages(pid_t pid, unsigned long nr_pages, void **pages,
+\\ const int *nodes, int *status, int flags)} is defined in
+\texttt{mm/migrate.c} to allow to move pages from one NUMA node to another. Note
+that this is an expensive operation that requires the cache controllers of the
+various cores to perform the migration of pages working at 64Bytes per time. For
+more information about NUMA policies refer to \\
+\texttt{Documentation/vm/numa_memory_policy.txt} and manpages.
+
+\section{Conclusions}
+\label{sec:Conclusions}
+
+In this lecture various parts of the memory management of the linux kernel were
+explored. While the code seen in the previous lectures were about specific,
+older versions of the kernel, the concept shown in this lecture apply also to
+modern versions of it. One main observation has to be done: as anticipated the
+concept of high memory thankfully is not present in 64 bit systems since the virtual
+address space of the kernel is more than enough to address all the possible
+physical memory.
+
+The concept of NUMA system is introduced in the kernel which brings in new
+problems and
+interfaces in the system programming world such as the concept of NUMA policies.
+In linux UMA systems are treated as NUMA systems having just one node. In this
+context allocations are driven by NUMA policies combined with the Buddy Sytems.
+
+When an allocation needs to be performed, the current NUMA policy for the thread
+issuing the request is queried combined with the eventual zone modifier defined
+by the \texttt{gfp_mask} of the request to choose the Buddy System that has to
+fulfill the request. There is one Buddy System per zone within a node and the
+requests to one buddy are serialized, i.e. managed through the lock in
+\texttt{zone_t}.
 
 
-In case of NUMA we must also tell which numa node we want to allocate memory etc. or in case of Get free pages returns any numa node etc. Various NUMA policies are specified on how the node is chosen and can be set through set mempolicy. nodemask tell which nodes are involved and maxnode how many bits of the maks need to be checked. The modes can be default which asks for memory from the same node in which the request is issued. bind is from where I was spawned. Interleave different node on each allocation. Preferred you choose.
-
-mbind sets a numa policy for a range of addresses.
-
-move pages is used to move from one numa node to the other. A set of pages moved to a set of nodes and the status tells whether the call succeeded. The cache controllers of the various cores read and communicate for moving pages. 1 line is 64 Bytes therefore there is great overhead to move pages.
-
-Issues are fragmentations (internal and external). Latency. For each numa node there is a buddy system. Anytime asking pages and releasing a spinlock is used.
-
-Fast allocators allow quick allocation through caching. SLAB a block is used. SLUB is the default and is an optimisation of SLAB.
 
 \newpage
 \bibliography{Lec6}
