@@ -143,21 +143,117 @@
 
 % **** YOUR NOTES GO HERE:
 
-\iffalse
-The bootmem allocator is used for allocating memory in the 8MB addressable by the kernel right after decompression.
-\fi
 
-Spawning many processes with a short lifetime it is not performed efficiently through the buddy system.
+As described, even though the Buddy Allocator is a fast algorithm to manage
+memory for the kernel it still has some problems that aren't really addressed:
 
-Quicklist avoid contention of allocating pages by pre assigning pages to cores. The SLAB allocator is used for buffers.
+\begin{itemize}
+    \item \textbf{Internal Fragmentation:} produced by the granularity at which
+        the Buddy System works (page size). If the kernel needs just a buffer
+        of size less than that of a page, it still has to allocate the page
+        fully, meaning that the remaining space cannot be used by other
+        allocations.
 
-In quicklists no syncronization is needed. If no entries available in the list it asks memory to the buddy system through \_\_get\_free\_page
+    \item \textbf{External Fragmentation:} after many allocations of small size
+        it might happen that the Buddy System is not able to coalesce some
+        buddies into bigger blocks of contiguous memory meaning that if at some
+        time the kernel needs a large block of contiguous memory, such request
+        cannot be fulfilled even if there are a set of \textit{not contiguous}
+        pages that together make the size of the request.
 
-\section{Quicklist Allocation}
+    \item \textbf{Spinlock Contention:} the allocation in the same memory zone
+        within a node is serialized since each allocation needs to acquire
+        \texttt{zone_t->lock}. This can become a bottleneck if multiple kernel
+        threads are trying to allocate memory.
+\end{itemize}
 
-Kernel threads can move around in cores: get cpu var is a wrapper to a set of calls that disables preemption for that specific core until re enabled by put cpu var.
+\section{Quicklists}
+\label{sec:Quicklists}
+
+Quicklists consist in pre-allocating pages for each CPU. The list of free pages
+is kept in a \textit{per-cpu variable} meaning that each CPU will have its own
+variable with its own list of pages. This new technique of allocating pages
+increases the parallelism of the allocation with respect to the Buddy System
+since threads running on different CPUs do not have to dispute on the zone lock
+but can take pages from their own free list. It was mainly used for page table
+pages allocations such as \texttt{pgd_alloc} etc.
+
+The allocation of a page through quicklists is done through the
+\texttt{quicklist_alloc} function.
+
+\begin{verbatim}
+    > include/linux/quicklist.h
+    static inline void *quicklist_alloc(int nr, gfp_t flags, ...) {
+        struct quicklist *q;
+        void **p = NULL;
+
+        q = &get_cpu_var(quicklist)[nr];
+        p = q->page;
+
+        if (likely(p)) {
+            q->page = p[0];
+            p[0] = NULL;
+            q->nr_pages--;
+        }
+        put_cpu_var(quicklist);
+
+        if(likely(p))
+            return p;
+
+        p = (void *) __get_free_page(flags | __GFP_ZERO);
+        return p;
+    }
+\end{verbatim}
+
+In the allocation \texttt{get_cpu_var} is called to get the reference to the
+free list assigned to the CPU the thread is currently running on. In doing
+so preemption is disabled in \texttt{get_cpu_var} in order to not allow the
+thread to be moved on another CPU with a reference to a variable which is
+specific to the CPU it is currently running on, otherwise concurrency problem
+might arise.
+
+\texttt{q->page} is the first page of the free list. It is checked whether the
+free list is empty (\texttt{NULL}) through \texttt{if(likely(p))}. The
+\texttt{likely} macro informs the compiler that the flow of execution will take
+the branch path meaning that \textit{likely} the code block inside the
+\texttt{if} will be executed therefore the compiler should take care to optimize
+the branch prediction. Inside the \texttt{if} code block the \textit{head}
+(first element) of the list is taken and the pointer of the list is set to the
+pointer to the next page held inside \texttt{p[0]} and the number of free pages
+is decremented (\texttt{q->nr_pages--}).
+
+Finally \texttt{put_cpu_var} will re-enable preemption. If there was indeed a
+page available in the free list then it is returned, otherwise the allocation
+falls back to the Buddy System through \texttt{__get__free_page()}.
+
+Quicklists were used in the i386 architecture from kernel v. 2.6.22 up to
+2.6.24.7 and have then been replaced by per-cpu pages/hot-n-cold pages.
+
 
 \section{SLAB Allocator}
+
+To make more efficient the allocation of small frequently allocated/deallocated data
+structures in the kernel such as \texttt{pid, mm_struct} the
+\textit{slab} allocator (and in later versions also the \textit{slob} and
+\textit{slub}) was introduced.
+
+The main goals of this new allocator are:
+
+\begin{itemize}
+    \item Amortize the internal fragmentation produced by the Buddy System
+        allocator for small allocations.
+    \item Improve access performance to kernel object by aligning them to L1/L2
+        caches.
+    \item Cache commonly used objects to alleviate the system from allocating,
+        initializing and destroying objects.
+\end{itemize}
+
+\begin{center}
+  \includegraphics[width=0.8\textwidth]{slabrel.png}
+  \marginnote{\fig{1}{0 pt}{Slab structs relationships. (\cite{gorman_2004} pp. 16)}}[-6cm]
+\end{center}
+
+
 
 There is a list of caches where each cache keeps a slab of a specific size. A cache is organised in three types of slabs: full (Don't have buffers to be given), partial (some used and some free), free (deallocated or never allocated). Objects are abstractions over pages.
 

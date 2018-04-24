@@ -1,0 +1,297 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{April 24}{Alessandro Pellegrini}{14}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+\section{Task vs Processes}
+\label{sec:Task vs Processes}
+
+A task is something that is associated with some management of interrupt
+services. Processes: execution traces related to user mode or kernel mode
+programs.
+
+Receiving an interrupt means that someone is asking the attention and this
+materializes a task. We don't want to block processes since it may make the
+performance worse. Interrupt management is shifted in time by delaying the
+execution. With multiple interrupts, multiple tasks are materialized. Multiple
+tasks can be aggregated into a single process/thread execution trace.
+
+Many to one aggregation: we must ensure that no task is subject to starvation.
+There should be some priority scheme.
+
+Reconciliation point: a point in time convenient to process the interrupts. In
+this time no critical section. This scheme has weaker guarantees about the
+processing of interrupts with respect to usual meaning of interrupts.
+
+All the operating systems handle interrupts in this way. Conventional
+conciliation points are
+
+\begin{itemize}
+    \item Returning from a systemcall: check if there are tasks pending
+    \item Before executing a context-switch: if the next process is an idle
+        process it might be convenient to process tasks.
+    \item Specific kernel thread points. Points in kernel code such that no
+        critical sections are involved or points with logically completed
+        operations.
+\end{itemize}
+
+
+The management of interrupts must be split into at least two part: the first
+part that serves the interrupt in order to let the device continue executing and
+the second which is really processing the interrupt.
+
+In the second part we can have many to one aggregation to make the processing
+more lightweight.
+
+\textit{top half:} tiny amount of work to setup a task (bottom half) and the
+data structures necessary to finalize and manage the interrupt.
+Portion of code executed with interrupt flags cleared (requests disabled).
+
+\textit{bottom half:} similar to process management. As soon that it can be
+executed it will. 
+
+Historical data structures were Task queues up to version 2.5. Then tasklets,
+soft irqs etc were introduced.
+
+\section{Task Queues}
+\label{sec:Task Queues}
+
+Some task queues were associated with specific reconciliation points letting the
+developer choose at what point a task was processed. The three task queues were:
+
+tq immediate: executed when returning from syscall or timer interrupt
+
+tq timer: only on timer interrupt
+
+tq scheduler: checked on processes that can live on userspace but not checked on
+kernel only threads.
+
+Additional task queues could be defined.
+
+A task is represented by struct tq struct. sync is a member that needs to be
+initialized to 0 to let the api properly manage the data structure.
+
+A task can be queued through queue task and can be flushed through run task
+queue (all tasks of the queue are processed).
+
+Sync is internally used to inform whether it is pending (1).
+
+schedule task is used as run task queues but specific for tq schedule queue.
+
+mark bh to inform that run task queue has bottom half code to be executed.
+
+software irq (softirq): as an interrupt request but just generated by software
+to notify the kernel that something is to be done. Do bottom half is called in
+schedule and ret from sys call. Execution is done in process context. Blocking
+had not to be executed in botoom halfs.
+
+Task queues limitations: single thread execution, heavy interrupt load made the
+performance worse since all tasks had to be executed.
+
+Task queues are no longer used from version 2.6.
+
+
+\section{Tasklet}
+\label{sec:Tasklet}
+
+Definition of a task. A Tasklet represent only one task and not a task queue.
+Tasklet can be declared as enabled or disabled. The former is run whenever
+possible while the latter only when it is enabled. The latter is used to
+register the tasks with not so high priority.
+
+
+tasklet schedule puts a tasklet into a pool from which the kernel takes and
+executes tasklets. From this pool tasklets can be executed on specific kernel
+threads. In tasklet you can use blocking services but it is highly discouraged
+since it blocks the kernel thread that executes tasklets.
+
+
+Tasklets are run using sofirqs. They can be masked.
+
+
+Soft irqs are fired after running an hardware interrupt handler. The dispatcher
+calls the interrupt handler and when it returns the dispatcher checks whether
+the softirq flag is set and if so tasklets are run.
+
+
+\section{Work Queues}
+\label{sec:Work Queues}
+
+Higher latency than tasklets but solves most of the problems of tasklets. More
+granularity and control on tasklet management. Blocking calls are allowed but
+discouraged.
+
+work struct: a data structure that can be queued and a reach api to work on
+them. Can define a delayed work: it can be processed later. Defferrable can be
+executed even with more delay.
+
+
+delayed work: task should be delayed and by the timer it is defined a priority.
+
+work queue struct: pool of workers that tells which threads are in charge of
+executing the tasks of this queue.
+
+
+\section{Kernel Timers}
+\label{sec:Kernel Timers}
+
+A jiffie is a unit of time. A global variable is kept with the number of
+jiffies that have occurred since the system was booted.
+The time quantum given to a process is a multiple of jiffies. 
+
+hlist description: prev of hlist node has a double pointer to the content of
+next of the previous node.
+
+timer wheel: is a multi level hash table. 5 levels of time, each one chains the
+timers according to the scheme shown aboves.
+
+\section{Final Project Information}
+\label{sec:Final Project Information}
+
+Implement fiber support in the linux kernel.
+
+
+\newpage
+\bibliography{Lec14}
+\bibliographystyle{plainnat}
+\end{document}
