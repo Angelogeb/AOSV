@@ -1,0 +1,294 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{April 27}{Alessandro Pellegrini}{15}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+\section{Generic Lists in Linux}
+\label{sec:Generic Lists in Linux}
+
+
+The prev pointer in \texttt{list_head} usually points to the entry of the struct
+that points to the node instead of the start of the struct. But from this fact
+how can we retrieve the start of the struct given the pointer to one of its
+entries? \texttt{offsetof} is able to return, given a member of a struct, its
+offset from the beginning of the struct. \texttt{container_of} uses
+\texttt{offsetof} to get the struct containing a given entry pointed by
+\texttt{ptr}.
+
+
+\section{Timer Interrupts Management}
+\label{sec:Timer Interrupts Management}
+
+\subsection{Up to 2.4}
+\label{sub:Up to 2.4}
+
+Upon receiving the timer interrupt the jiffies variable is incremented and it is
+checked whether the time quantum for a running thread has expired. In that case
+a bottom half is scheduled and \texttt{need_resched} is set to inform upon a
+reconciliation point preempt this thread. The reconciliation point is when
+returning to the dispatcher and therefore the scheduler is called (bottom half).
+
+The top half of the handler is implemented in \texttt{do_timer} which increments
+the \texttt{jiffies}, updates the time of the running process and marks that the
+bottom half needs to be checked.
+
+Upon receiving the timer interrupt (IRQ0) first of all the context of the
+registers since it is a precise interrupt (can happen at any moment in time).
+Afterward the handler is called (\texttt{do_timer_interrupt}) which will
+eventually call \texttt{do_timer} that on \texttt{update_process_times} will
+set \texttt{need_resched} if the time quantum has expired. 
+
+\subsection{From 2.6 to later}
+\label{sub:From 2.6 to later}
+
+With the introduction of the LAPIC the timer interrupt management is
+reimplemented relying on this new technology.
+
+\texttt{set_irq_regs} returns a pointer to a \texttt{pt_regs} which is a cpu
+snapshot of the previous cpu context.
+
+The interrupt handler is \texttt{local_apic_timer_interrupt} that takes some cpu
+variables, computes some stats and finally calls the event handlers.
+
+\subsection{High-resolution timers}
+\label{sub:High-resolution timers}
+
+Allow to specify higher granularity timers mainly used in real time operating
+systems.
+
+Clock id tells which clock the initialization should be done for. This is a
+posix specifications that tell the kinds of codes but some of them cannot be
+implemented in constrained architectures.
+
+
+\texttt{need_resched} is replaced with a call to a function that checks one bit
+of a per cpu variable.
+
+
+\section{Process Control Block}
+\label{sec:Process Control Block}
+
+One for each thread. \texttt{volatile long state} is tells the current state of
+the thread (running, wait etc). The two \texttt{mm_struct} are used to manage
+the user space view of memory. The PCB identifies the thread but it keeps also
+information to which process the thread is related. The \texttt{pid} is what is
+exposed at user space as \texttt{tid} which is the thread id. While
+\texttt{tgid} keeps the id of the process to which the thread belongs and stand
+for \textit{Thread Group Id}. \texttt{ppid} stores the \texttt{tgid} from which
+the process was forked. \texttt{thread_struct} thread is an architecture
+specific data structure which keeps various information about the state of the
+cpu such as TSS, FPU, CR2 etc. \texttt{int prio} is used to implement the
+\texttt{nice()} system call to specify the priority of the thread.
+\texttt{policy} which will see later. Finally two entries for the
+\textit{affinity} of the thread to the various cpus.
+
+In \texttt{mm_struct} there is the virtual address of the page table
+(\texttt{pgd}). Upon scheduling the scheduler will look into the PCB, check the
+\texttt{mm_struct} and sets \texttt{cr3} with the translation of the \texttt{pgd}
+entry. To describe the process virtual address space in a more generic way there
+is \texttt{vm_area_struct} that describes how the memory is mapped in the
+address space of the process.
+
+\texttt{active_mm} is used to steal an mm when running in an anonymous process.
+Kernel level threads are threads that do not have a user space address. For
+these threads we either setup these data structures also for this kind of
+threads or steal it from a user space process. For kernel threads mm is set to
+null and active mm is set to the virtual address space of the user space thread.
+For user space threads \texttt{active_mm == mm}. A memory view is necessary for
+kernel threads since some facilities require in read mode mm data structures
+just to perform some corner case tasks.
+
+\subsection{VM area struct}
+\label{sub:VM area struct}
+
+
+When \texttt{mmap}ping memory the kernel is lazy meaning that until it is really
+accessed it is not allocated really. Once it is accessed a minor page fault
+occurs and memory is allocated to the process requesting.
+
+\section{PCB Allocation}
+\label{sec:PCB Allocation}
+
+
+Up to kernel 2.6 the PCB was placed at the base of the kernel level stack. The
+kernel level stack was just 2 frames (8KB) which was also a constrain on the
+maximum number of calls that could be performed in kernel mode by the process.
+
+From 2.6 the PCB was moved to another place in memory and at the base of the
+stack there was \texttt{thread_info} with a member called \texttt{task} that
+pointed to the PCB. Also the kernel level stack could be 2 or 4 memory frames.
+There is a problem with kernel level stacks which is that they must be
+contiguous and are taken from zone normal which has high contention.
+
+The kernel level stack was defined as \texttt{thread_union}.
+The linux kernel level stack has always been the weak
+point in terms of security and it required some time to be re implemented.
+\texttt{thread_info} contains the pointer to the PCB, a set of flags, times that
+the thread has been preempted etc. \texttt{addr_limit} tells at what point there
+is a switch from kernel level addresses to user level addresses.
+\texttt{access_ok()} was just looking to this member to know whether it was safe
+to access memory instead of looking at all the memory management data
+structures.
+
+\texttt{sysenter_return} is used for systemcalls related to timing events. For
+example if a thread executes \texttt{sleep(10)} but the system call fails for
+some reason with \texttt{EINTR} it would be useful to know how much time has
+slept.
+
+Kernel level stacks are contiguous and taken from physical memory. Overflowing
+the stack means that we're touching physical memory assigned to data structures
+of the kernel.
+
+
+\texttt{thread_info} was moved to the PCB and the stack is just kernel level
+stack. Also the stack is not contiguous but \texttt{vmalloc}ed. This introduced
+great latency.
+
+\texttt{current} returns memory address of the PCB. Previously it used the
+thread info and then it became a per cpu variable that is set any time a thread
+is scheduled.
+
+\newpage
+\bibliography{Lec15}
+\bibliographystyle{plainnat}
+\end{document}
