@@ -1,0 +1,408 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{May 4}{Alessandro Pellegrini}{16}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+\section{Linux Scheduler}
+\label{sec:Linux Scheduler}
+
+One of the fundamentals things in unix are priorities that are related to the
+niceness of the processes.
+
+In linux there is notion of real time processes. It is soft real time. Hard real
+time is not really supported in Linux. Soft real time there are boundaries but
+some times the OS might miss deadlines.
+
+Real time priorities in linux go from 0 to 99. Higher value means higher
+priority differently from niceness.
+
+In standard priorities higher values mean lower priorities and they directly map
+to niceness form 100 to 139 ([-20, 19]).
+
+in task struct there are a lot of variables related to the priorities of each
+thread. Depending on the strategy of scheduling multiple variables can be used.
+
+\begin{itemize}
+    \item static priority is the one given by the user in kernel representation
+    \item normal priority: if there are multiple tasks that have the same static
+        priority but belong to different policies will get different normal
+        priorities
+    \item prio is dynamic, if there is some process with a really high priority
+        and taking a lot of cpu this value is changed to preempt such process
+    \item real time priority
+\end{itemize}
+
+
+effective prio computes the priority and uses normal prio. Both take as
+parameter task struct so they have info about the process. normal prio Maps rt
+priority to kernel representation or the static priority.
+
+
+The time used by a process is defined by the time slice assigned to it. Linux
+manages this change through load weights. In task struct there is a sched entity
+which inside has load weight. Unsigned long has the weight.
+
+sched prio to weight contains one entry for each nice value. These values are
+used to determine the stretch a process gets with respect to other tasks in the
+system.
+
+\section{Scheduling Classes}
+\label{sec:Scheduling Classes}
+
+
+Sched rr is real time round robin
+
+sched other/sched normal, round robin time-sharing depending on nice values
+
+sched deadline (3.14): constant bandwith server (CBS) algorithm on top of
+earliest deadline first
+
+sched deadline (4.13): CBS replaced with Greedy Reclamation of Unusued Bandwith
+
+There are some specific tasks that should be carried out by the scheduler during
+time. The tasks performed by the scheduler depend on the scheduling class and
+therefore the sched class struct is needed.
+
+enqueue task enques a task
+dequeue task it re
+
+yield task is called when a process yields spontaneously the CPU for example in
+FIFO real time
+
+check preempt curr: checks whether the 
+
+put prev task and pick next taks permits to perform the context switch.
+
+select task has a variable that specifies a cpu. In SMP we would like to have
+the scheduler work in isolation on each core and allow tasks to migrate to
+different cores. This allows to choose which task should be moved from one core
+to another.
+
+There is one instance of the idle task for each core in the system to allow
+multiple cores to be idle.
+
+\section{Run Queues}
+\label{sec:Run Queues}
+
+A run queue is a set of tasks that are logically in the ready state (can be
+activated). Different tasks are grouped in different run queues depending the
+policy. A run queue is a per cpu variable.
+
+\begin{itemize}
+    \item nr running: the number of tasks in the run queue
+    \item curr, idle: pointers to the currently running task and the idle
+        process
+    \item rt: for a real time scheduler strategy for the run queue
+    \item cfs: same as rt but for fair scheduling
+\end{itemize}
+
+
+\section{Wait Queue}
+\label{sec:Wait Queue}
+
+Mentioned when running block devices. For example reading from a disk may be
+blocking and therefore the thread should be put to sleep. We have to keep track
+that some task is waiting for some event. Any number of Wait Queues can be
+defined and are used to put to sleep threads waiting for some event.
+
+Thundering Herd: lots of processes waiting for the same event overload the
+schedule since many task need to be moved from the wait queue to the run queue.
+
+Wait queue have been completely changed. It is composed of a list linked through
+the list head. A function pointer wakes up a task.
+
+A task leaving in a waitqueue can be exclusive (?).
+
+add wait queue allows to add a task to some wait queue. WQ flag exclusive is
+cleared.
+
+add wait queue exclusive does the same with exclusive set.
+
+The list is paritioned into two parts: the first one with not exclusive while
+the second exclusive. An exclusive wakeup moves just one task of the queue while
+a not exclusive wakes up all non-exclusive.
+
+wake up interruptible is related to special threads of the linux kernel. sync
+immediately reschedules some process with higher priority.
+
+
+\section{Thread States}
+\label{sec:Thread States}
+
+\begin{itemize}
+    \item Task running: the task is running on some cpu core
+    \item task zombie: the task has exited but the parent has not asked for the
+        exit value yet (process cannot be scheduled but pcb exists still)
+    \item interruptible/uninterruptible: tasks that are sleeping on some wait
+        queue for some condition. Interruptible: if a signal is triggered for
+        that process then it should be scheduled to handle the signal
+    \item task killable: similar to task uninterruptible but is vulnerable to
+        sigkill.
+\end{itemize}
+
+
+\section{PID Management}
+\label{sec:PID Management}
+
+
+current allows to know the currently scheduled task on a cpu.
+
+Multiple hashtables allow to efficiently find processes from
+pid/tgid/pgrp/session.
+
+
+struct pid: identifies processes in the kernel word and allows to link them to
+pids in user space world. Useful to know what user space pid belongs to what
+namespace.
+
+pids within a namespace start always from 0. This pids are then mapped to the
+actual pid of the system.
+
+Managing tasks has become very difficult. Reference to task structs might not
+allow to remove PCBs. Storing a pid of a process would create consistency
+problems because on fork pids are reused therefore a pid might point to a
+totally different user space process.
+
+struct pid is the only way to access PCBs in a consistent manner.
+
+\begin{itemize}
+    \item count: reference counter tells how many execution traces are referring
+        to this struct
+    \item hlist
+\end{itemize}
+
+
+Up to 2.6.26 there was find task by pid that allowed to get a PCB from the
+integer representing the pid. Afterwards the api has been replaced by find task
+by vpid. Vpid is a virtual pid that takes into account that different namespaces
+assign the same pid to different processes. These APIs where implemented on top
+of hash tables.
+
+From 4.14 up radix trees are used. Pids are replaced by idrs. idr is a sparse
+array. Vpid is split into blocks of 6 bits. Items in the tree are idrs.
+
+
+
+Scheduler entry points are multiple. A direct invocation can be issued through
+\texttt{schedule()} and a lazy invocation setting the \texttt{need_resched}
+variable.
+
+\texttt{schedule_tick} eventually calls update rq clock which tells how many
+jiffies have passed since some last event in a specific run queue.
+
+\texttt{schedule} is also called when some process enters to sleep for example
+on read moving a task to the wait queue.
+
+\texttt{wake_up*()}.
+
+
+\section{Scheduler in 2.4}
+\label{sec:Scheduler in 2.4}
+
+Had a linear complexity with respect to the number of tasks. Time is divided
+into epochs and once an epoch finishes, meaning that all processes in a queue
+have run at least once. If some processes didn't use the whole processing time
+they had, in the successive epoch half more quantum of the leftover time is
+given to them.
+
+\texttt{schedule(void)}
+
+The idle task is picked and the list of the run queue of the cpu is scanned. If
+some process could be scheduled (affinity with the current cpu), its goodness
+was computed. The process with higher goodness is then scheduled.
+
+One single run queue for all the cores.
+
+If \texttt{c == 0} then a new epoch needs to be started.
+
+Disadvantages:
+
+\begin{itemize}
+    \item non runnable and runnable tasks mixed in the same run queue
+    \item contention on the list on SMP systems
+\end{itemize}
+
+\section{Scheduler in 2.6.8}
+\label{sec:Scheduler in 2.6.8}
+
+runqueue has two arrays of struct prio array. Active and expired pointers that
+point to them. Any time a process ends its quantum it is moved to expired. At
+some point the expired group is moved to the active by swapping just the
+pointers (new epoch by simply switching to pointers).
+
+Each prio array has a vector of queues of processes. The size of the vector is
+140. Bitmap with bit for each entry of the array telling whether there is at
+least one process in the queue associated with the bit.
+
+Higher priorities have a larger time slice. At position 0 priority 100, position
+1 priority 99 etc.
+
+Every 200ms a CPU checks if some other CPU has more processes in its runqueue to
+rebalance the load. If the CPU is idle then it checks each ms to see if it can
+schedule some process.
+
+
+\section{Staircase Scheduler}
+\label{sec:Staircase Scheduler}
+
+Rank based scheme that works better on environments with more or less 10 CPUs.
+
+
+\section{Completely Fair Scheduler}
+\label{sec:Completely Fair Scheduler}
+
+Uses a red black tree where each node keeps the total execution time in
+nanoseconds from last epoch start and maximum execution time for each process.
+Right side processes
+that have run longer on the cpu while on the left the contrary. The process to
+be scheduled is always found on the left branch of the tree.
+
+\texttt{__switch_to} updates the TSS of the current cpu and updates control
+registers. Change stack pointer and therefore execution context. It is also
+saved for rescheduling again the process.
+
+
+\newpage
+\bibliography{Lec15}
+\bibliographystyle{plainnat}
+\end{document}
