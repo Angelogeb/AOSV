@@ -1,0 +1,271 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{May 8}{Alessandro Pellegrini}{17}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+\section{Fork syscall}
+\label{sec:Fork syscall}
+
+
+
+There is a maximum number of threads that can be spawned in linux which is
+\texttt{max_threads} variable in the \texttt{fork_init()} function.
+
+Both fork and pthread create rely on do fork function to initialize a process.
+
+Code is from kernel 2.4. In \texttt{sys_clone} some flags that tell how the
+current thread should be cloned are used. Both the flags and the stack pointer
+are taken from registers.
+
+In order for a new process to be spawned a stack must be setup. \texttt{__clone}
+function setups the registers in the pointer.
+
+\texttt{get_pid} is an entry point to the pid allocator subsystem that uses idr.
+
+\texttt{copy_mm} copies the memory map.
+
+\texttt{sem_undo} is used to ensure that
+after some process dies, the locks acquired by it are released.
+
+On forking, the process might still have some amount of time of its timeslice.
+That is halved and split to the parent and the newly created child.
+
+\texttt{SET_LINKS} and \texttt{hash_pid} are used to initialized the data
+structures for thread management (namespaces etc).
+
+On kernel 2.4 the information related to the process control block are placed in
+the kernel level stack.
+
+\texttt{copy_thread}
+
+When creating the new process the kernel level stack must be properly
+initialized respecting the convention of the dispatcher which expects the
+registers to be found on the kernel level stack.
+
+\texttt{copy_mm}
+
+One if case checks whether virtual memory is shared or not. In the code the
+reference counter of the memory map is increased to ensure that it is not teared
+down while still in use.
+
+
+
+\texttt{mm_init} initializes a new PGD.
+
+\texttt{dup_mmap} initializes memory management for the new process.
+
+\texttt{copy_page_range} sets up the PTE. It also ensures Copy On Write if
+needed.
+
+
+\section{Kernel level threads}
+\label{sec:Kernel level threads}
+
+It has its own \texttt{task_struct} and never switches to user space. The API
+for creating new threads is \texttt{kthread_create}. The interleaved execution
+of the kernel allows the system to be responsive to user interactivity.
+
+This threads are not related to init. When pid0 spawns init also
+\texttt{kthreadd} is spawned of which childs are kernel level threads.
+
+
+On context switch from kernel space to user space, it is checked if there are
+any signals pending. If those are handled by the US then control is passed to
+the handler. How to go back in the execution path that was interrupted?
+Theoretically another switch to kernel must happen that then restores the
+context.
+
+In early days, stack was executable. In signal handling through SIGRETURN the
+whole PCB was present in stack. Sig return oriented programming. XD, execution
+deny flag allows to set some memory regions as not executable. Used in modern
+systems to make the stack not executable.
+
+\section{Out of Memory Killer}
+\label{sec:Out of Memory Killer}
+
+The first thing done is check whether some process has some kill signal pending.
+If there isn't, the process that gives highest revenue in terms of memory is
+killed. Kernel threads are skipped in this scenario. \texttt{oom_badness}
+evaluates the various processes.
+
+\section{Linux Watchdog}
+\label{sec:Linux Watchdog}
+
+Concept derived from embedding systems. Checks whether the system is still
+running properly.
+
+Two parts implement it. A kernel level module allows to perform hard reset and
+the user space background daemon that refreshes the timer. As long as user space
+is living the system won't be reset.
+
+NMI are interrupts delivered to the handler in any case, even if they are
+masked.
+
+\texttt{ioctl} allows operations that are not captured by system call semantics.
+This function allows to interact with drivers directly through files.
+
+This allows to integrate kernel modules without having to mess systemcalls.
+
+\section{Loadable Kernel Modules}
+\label{sec:Loadable Kernel Modules}
+
+In order to implement a module, the license must be specified. Two function
+pointers. When loading a kernel module its image is taken from disk and these
+functions are "constructors/destructors" of the module. For example watchdog in
+the init creates the file in \texttt{/dev}. Kernel Level Modules can use
+facilities of other modules. At some point one module calls a function exposed
+into another module.
+
+Kernel keeps a reference counter for each kernel module. \texttt{lsmod} lists
+all modules that have been loaded by the system. The number is the reference
+counter telling how many modules use that module. On unmounting some module all
+its dependent module must be unmounted before.
+
+The reference counter of a specific kernel module is incremented through
+\texttt{try_module_get} which might fail. \texttt{module_put} is the opposite
+that decrements the reference counter. Some modules might be declared as
+unloadable.
+
+\newpage
+\bibliography{Lec15}
+\bibliographystyle{plainnat}
+\end{document}
