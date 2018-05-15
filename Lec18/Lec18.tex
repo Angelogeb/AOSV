@@ -1,0 +1,237 @@
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{-0.5 in}
+\setlength{\evensidemargin}{1.5 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{5.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.5 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.07 in}
+\setlength{\marginparwidth}{145pt}
+
+%
+% ADD PACKAGES here:
+% 12
+
+\usepackage{amsmath,
+            amsfonts,
+            amssymb,
+            graphicx,
+            mathtools,
+            flexisym,
+            marginnote,
+            hyperref,
+            titlesec}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[shortlabels]{enumitem}
+
+\graphicspath{ {images/} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+\newcommand{\aosv}{1044414: Advanced Operating Systems and Virtualization}
+\newcommand{\wir}{1038137: Web Information Retrieval}
+\newcommand{\va}{1052057: Visual Analytics}
+\newcommand{\advprog}{1044416: Advanced Programming}
+\newcommand{\dchpc}{1044399: Data Centers and High Perf. Computing}
+
+\newcommand{\qu}[1]{\marginnote{\textcolor{cyan}{#1}}}
+
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#4}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 7.4in { {\bf #1
+    \hfill Spring 2018} }
+       \vspace{4mm}
+       \hbox to 7.4in { {\Large \hfill Lecture #4: #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 7.4in { {\it Lecturer: #3 \hfill Scribe: Anxhelo Xhebraj} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{Lecture #4: #2}{Lecture #4: #2}
+
+   \iffalse
+   {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept.}
+
+   {\bf Disclaimer}: {\it These notes have not been subjected to the
+   usual scrutiny reserved for formal publications.  They may be distributed
+   outside this class only with the permission of the Instructor.}
+   \vspace*{4mm}
+   \fi
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\iffalse
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+\fi
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+            \vspace{#2}
+            \begin{center}
+            Figure \thelecnum.#1:~#3
+            \end{center}
+    }
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+\newcommand\E{\mathbb{E}}
+
+
+\begin{document}
+
+\nocite{*}
+
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+
+\lecture{\aosv}{May 11}{Alessandro Pellegrini}{18}
+
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+\section{Module Parameters}
+\label{sec:Module Parameters}
+
+Parameters might define how the module should behave when executing. In linux,
+to have variables passed to modules you define global variables and "register"
+them.
+
+To define global variables of a certain type as module parameters we can use
+\texttt{module_param}.
+
+When declaring these parameters some objects/pseudofiles are placed in Sysfs. We
+have to define the permission mask.
+
+
+Internal modules are the ones belonging to the main tree of the linux kernel and
+are included by default in \texttt{/lib/modules}. While external kernel modules
+are external piece of codes. \texttt{insmod} allows to insert the external
+module while \texttt{modprobe} checks \texttt{/lib/modules}. \texttt{rmmod}
+unloads the module.
+
+
+\section{Kernel Module Loading}
+\label{sec:Kernel Module Loading}
+
+The kernel allocates some memory to load both code and data structures. This
+piece of code is subject to relocation. The memory is allocated through
+\texttt{vmalloc} therefore it might not be contiguous in RAM but just virtually.
+
+In kernel 2.4 the relocation was much more limited. So most of the job of the
+relocation was done in userspace. When applications wanted to load kernel
+modules they first resolved symbols and then loaded it in ram.
+
+From kernel 2.6 the resolution of symbols is done by the kernel. The set of
+tools shown previously trigger the kernel actions for memory allocation, module
+loading and address resolution.
+
+Kbuild for building the kernel modules. A \texttt{.ko} file starts with a normal
+object file. \texttt{modpost} creates an additional file with extension
+\texttt{.mod} that has information about the symbols of the \texttt{.o} file.
+
+
+\texttt{EXPORT_SYMBOL} tells to Kbuild that it should take into account to make
+"visible" some symbols of the kernel for module developers to interact with the
+kernel.
+
+\texttt{kprobes} allow to inject code into the kernel for monitoring performance
+of kernel code. With kprobe everything will be probed except what is marked as
+not to be. Through \texttt{INT 3} breakpoints are introduced. It requires only
+one byte differently from other interrupts. Its code is \texttt{0xcc}.
+
+
+Setting \texttt{TF} flag the processor will stop execution at each instruction.
+\texttt{pushf/popf} allows to set the TF flag.
+
+Prob handlers are run with preemption disabled.
+
+
+\texttt{flush_tlb_all} is not exported. To find its virtual address we can use
+kprob to get it.
+
+
+\section{Kernel Messaging}
+\label{sec:Kernel Messaging}
+
+
+Specific modules that expose facilities to print on screen or files.
+
+\texttt{printk} similar in spirit to printf. Accepts a format string and the
+variables needed to be printed. \texttt{printk("\%pk", .. )} allows to print the real
+virutal address of some kernel memory. When issuing a call to \texttt{printk} we
+have to specify a priority.
+
+The different loglevels tell what the kernel has to do with messages that were
+generated or messages with no priority level specified.
+
+
+\texttt{/proc/sys/kernel/printk} keeps 4 integers about the various log levels.
+current, defualt, min etc.
+
+The prints are managed through a ring buffer.
+
+
+
+\texttt{automake}
+
+
+
+\newpage
+\bibliography{Lec18}
+\bibliographystyle{plainnat}
+\end{document}
