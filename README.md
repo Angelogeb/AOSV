@@ -4,7 +4,7 @@
 
 Feel free to fork and extend it.
 
-A useful resource (a bit updated) over concepts in the linux kernel can be
+A useful resource (a bit outdated) over concepts in the linux kernel can be
 found in
 [A Heavily-Commented Linux Kernel Source Code](http://www.oldlinux.org/download/ECLK-5.0-WithCover.pdf)
 
@@ -34,7 +34,8 @@ lecture just because new folders are created by copying and pasting older ones.
 
 * [Linux Cross Reference (LXR)](https://elixir.bootlin.com/)
 * [livegrep](https://livegrep.com/search/linux)
-* [ag - the_silver_searcher](https://github.com/ggreer/the_silver_searcher)
+* [ripgrep](https://github.com/BurntSushi/ripgrep/)
+* [Code Browsing](https://kernelnewbies.org/FAQ/CodeBrowsing)
 
 ## Tagged Content
 
