@@ -1,5 +1,22 @@
 # AOSV
 
+#### :warning: This repository is (sadly) not active anymore.
+
+Feel free to fork and extend it.
+
+A useful resource (a bit updated) over concepts in the linux kernel can be
+found in
+[A Heavily-Commented Linux Kernel Source Code](http://www.oldlinux.org/download/ECLK-5.0-WithCover.pdf)
+
+
+### :boom: [Related Project](https://github.com/beabevi/LKM-Fibers)
+
+The **project** developed for the course can be found [here](https://github.com/beabevi/LKM-Fibers).
+It covers some nice topics about kernel programming and it is relatively succint
+in its implementation.
+
+------------
+
 The repository holds the lecture notes of Spring 2018 of the Advanced Operating
 Systems and Virtualization course held by Alessandro Pellegrini. There are two
 branches, namely `online` and `master`. In the former there are the notes as
@@ -9,10 +26,9 @@ integrating material, classmates and professor.
 The repo is a bit dirty in its current state and the `online` version of
 lectures <= 5 does not really exist.
 
-Some lectures may have in the reference part stuff that is unrelated to the
-lecture just because new folders are created by copying and pasting older ones
-(this is because the format of the latex file is defined within each tex file,
-hopefully one day it will be clean).
+Some lectures have in the reference part stuff that is unrelated to the
+lecture just because new folders are created by copying and pasting older ones.
+
 
 ## Browsing the Linux Kernel
 
